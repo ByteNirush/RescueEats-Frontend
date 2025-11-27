@@ -6,10 +6,13 @@ import 'package:rescueeats/core/model/userModel.dart';
 import 'package:rescueeats/core/model/restaurantModel.dart';
 import 'package:rescueeats/core/model/menuItemModel.dart';
 import 'package:rescueeats/core/model/orderModel.dart';
+import 'package:rescueeats/core/model/addressModel.dart';
 
 class ApiService {
   // Production URL (Render)
+  // Production URL (Render)
   static const String baseUrl = 'https://rescueeats.onrender.com/api';
+  // static const String baseUrl = 'http://localhost:5001/api';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
 
@@ -181,52 +184,6 @@ class ApiService {
     }
   }
 
-  /// Google Authentication
-  ///
-  /// ⚠️ IMPORTANT LIMITATION:
-  /// The backend uses OAuth 2.0 web flow (GET /api/auth/google) which redirects
-  /// users to Google's consent screen in a browser. This is incompatible with
-  /// native mobile Google Sign-In which provides an ID token directly.
-  ///
-  /// Current Implementation:
-  /// - This method attempts to POST an ID token to /api/users/google-auth
-  /// - This endpoint does NOT exist in the current backend
-  ///
-  /// To Fix:
-  /// Option 1: Add a new backend endpoint POST /api/auth/google-mobile that accepts ID tokens
-  /// Option 2: Use WebView to implement the OAuth flow (GET /api/auth/google)
-  /// Option 3: Disable Google Sign-In in mobile app until backend support is added
-  ///
-  /// For now, this method will fail with 404 error.
-  Future<UserModel> googleAuth(String idToken, UserRole role) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/users/google-auth'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'idToken': idToken, 'role': role.name}),
-          )
-          .timeout(const Duration(seconds: 60));
-
-      final data = _processResponse(response);
-
-      // Save Token
-      final prefs = await SharedPreferences.getInstance();
-      if (data['token'] != null) {
-        await prefs.setString(_accessTokenKey, data['token']);
-      } else if (data['accessToken'] != null) {
-        await prefs.setString(_accessTokenKey, data['accessToken']);
-      }
-
-      if (data['user'] != null) {
-        return UserModel.fromJson(data['user']);
-      }
-      return UserModel.fromJson(data);
-    } catch (e) {
-      throw AppException(e.toString());
-    }
-  }
-
   Future<void> logout() async {
     try {
       final headers = await _getHeaders();
@@ -265,11 +222,10 @@ class ApiService {
         await prefs.setString(_accessTokenKey, data['accessToken']);
         return data['accessToken'];
       }
+      return null;
     } catch (e) {
-      // If refresh fails, user might need to login again
       return null;
     }
-    return null;
   }
 
   // --- RESTAURANTS ---
@@ -455,7 +411,6 @@ class ApiService {
         throw AppException('Restaurant ID is missing');
       }
 
-      // Backend expects: { restaurantId, items: [{menuId, quantity, price}], totalAmount, deliveryAddress, paymentMethod }
       final body = {
         'restaurantId': order.restaurantId,
         'items': order.items
@@ -469,7 +424,9 @@ class ApiService {
             .toList(),
         'totalAmount': order.totalAmount,
         'deliveryAddress': order.deliveryAddress,
+        'contactPhone': order.contactPhone,
         'paymentMethod': order.paymentMethod,
+        'coinsUsed': order.coinsUsed, // Added coinsUsed
       };
 
       final response = await http
@@ -481,7 +438,6 @@ class ApiService {
           .timeout(const Duration(seconds: 60));
 
       final data = _processResponse(response);
-      // API returns { order: {...} }
       final orderData = data['order'] ?? data;
       return OrderModel.fromJson(orderData);
     } catch (e) {
@@ -525,6 +481,37 @@ class ApiService {
             headers: headers,
             body: jsonEncode({'status': status}),
           )
+          .timeout(const Duration(seconds: 60));
+      _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<void> assignDeliveryPerson(
+    String orderId,
+    String deliveryPersonId,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/orders/$orderId/assign'),
+            headers: headers,
+            body: jsonEncode({'deliveryPersonId': deliveryPersonId}),
+          )
+          .timeout(const Duration(seconds: 60));
+      _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<void> deleteOrder(String orderId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .delete(Uri.parse('$baseUrl/orders/$orderId'), headers: headers)
           .timeout(const Duration(seconds: 60));
       _processResponse(response);
     } catch (e) {
@@ -634,6 +621,214 @@ class ApiService {
       return List.from(data['leaderboard'] ?? []);
     } catch (e) {
       return null;
+    }
+  }
+
+  // --- CANCELED ORDERS MARKETPLACE ---
+
+  Future<List<OrderModel>> getCanceledOrders({
+    String? cuisine,
+    double? minPrice,
+    double? maxPrice,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (cuisine != null && cuisine.isNotEmpty) {
+        queryParams['cuisine'] = cuisine;
+      }
+      if (minPrice != null) {
+        queryParams['minPrice'] = minPrice.toString();
+      }
+      if (maxPrice != null) {
+        queryParams['maxPrice'] = maxPrice.toString();
+      }
+
+      final uri = Uri.parse(
+        '$baseUrl/orders/canceled',
+      ).replace(queryParameters: queryParams);
+
+      final headers = await _getHeaders();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      final data = _processResponse(response);
+      final List<dynamic> list = data['orders'] ?? [];
+      return list.map((e) => OrderModel.fromJson(e)).toList();
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> applyCoins(
+    String orderId,
+    int coinsToUse,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/orders/$orderId/apply-coins'),
+            headers: headers,
+            body: jsonEncode({'coinsToUse': coinsToUse}),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<OrderModel> removeCoins(String orderId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/orders/$orderId/remove-coins'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 60));
+
+      final data = _processResponse(response);
+      return OrderModel.fromJson(data['order']);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  // --- ADDRESS MANAGEMENT ---
+
+  Future<List<AddressModel>> getAddresses() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(Uri.parse('$baseUrl/users/me/addresses'), headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      final data = _processResponse(response);
+      final List<dynamic> list = data['addresses'] ?? [];
+      return list.map((e) => AddressModel.fromJson(e)).toList();
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<List<AddressModel>> addAddress(AddressModel address) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/users/me/addresses'),
+            headers: headers,
+            body: jsonEncode(address.toJson()),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      final data = _processResponse(response);
+      final List<dynamic> list = data['addresses'] ?? [];
+      return list.map((e) => AddressModel.fromJson(e)).toList();
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<List<AddressModel>> updateAddress(AddressModel address) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/users/me/addresses/${address.id}'),
+            headers: headers,
+            body: jsonEncode(address.toJson()),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      final data = _processResponse(response);
+      final List<dynamic> list = data['addresses'] ?? [];
+      return list.map((e) => AddressModel.fromJson(e)).toList();
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<List<AddressModel>> deleteAddress(String addressId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/users/me/addresses/$addressId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 60));
+
+      final data = _processResponse(response);
+      final List<dynamic> list = data['addresses'] ?? [];
+      return list.map((e) => AddressModel.fromJson(e)).toList();
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  // --- NOTIFICATIONS ---
+
+  Future<void> registerFcmToken(String token) async {
+    try {
+      final headers = await _getHeaders();
+      await http
+          .post(
+            Uri.parse('$baseUrl/users/fcm-token'),
+            headers: headers,
+            body: jsonEncode({'fcmToken': token}),
+          )
+          .timeout(const Duration(seconds: 30));
+    } catch (e) {
+      // Ignore errors for token registration
+    }
+  }
+
+  // --- ACHIEVEMENTS ---
+
+  Future<Map<String, dynamic>> unlockAchievement(
+    String achievementId, {
+    int reward = 0,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/game/achievements/unlock'),
+            headers: headers,
+            body: jsonEncode({
+              'achievementId': achievementId,
+              'reward': reward,
+            }),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<List<dynamic>> getAchievements() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(Uri.parse('$baseUrl/game/achievements'), headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      final data = _processResponse(response);
+      return data['achievements'] ?? [];
+    } catch (e) {
+      throw AppException(e.toString());
     }
   }
 }

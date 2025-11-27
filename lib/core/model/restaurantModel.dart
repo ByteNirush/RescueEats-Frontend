@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:rescueeats/core/model/menuItemModel.dart';
 
 class LocationModel extends Equatable {
   final String type;
@@ -63,6 +64,7 @@ class RestaurantModel extends Equatable {
   final double minimumOrder; // rupees
   final bool isOpen;
   final OpeningHoursModel openingHours;
+  final List<MenuItemModel> menu;
 
   // Owner relationship fields
   final String? ownerId;
@@ -84,6 +86,7 @@ class RestaurantModel extends Equatable {
     required this.minimumOrder,
     required this.isOpen,
     required this.openingHours,
+    this.menu = const [],
     this.ownerId,
     this.ownerName,
     this.ownerEmail,
@@ -129,6 +132,11 @@ class RestaurantModel extends Equatable {
       openingHours: json['openingHours'] != null
           ? OpeningHoursModel.fromJson(json['openingHours'])
           : const OpeningHoursModel(open: '09:00', close: '23:00'),
+      menu:
+          (json['menu'] as List?)
+              ?.map((e) => MenuItemModel.fromJson(e))
+              .toList() ??
+          [],
       ownerId: ownerId,
       ownerName: ownerName,
       ownerEmail: ownerEmail,
@@ -151,6 +159,7 @@ class RestaurantModel extends Equatable {
       'minimumOrder': minimumOrder,
       'isOpen': isOpen,
       'openingHours': openingHours.toJson(),
+      'menu': menu.map((e) => e.toJson()).toList(),
       if (ownerId != null) 'owner': ownerId,
     };
   }
@@ -176,6 +185,7 @@ class RestaurantModel extends Equatable {
     minimumOrder,
     isOpen,
     openingHours,
+    menu,
     ownerId,
     ownerName,
     ownerEmail,

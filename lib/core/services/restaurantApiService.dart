@@ -8,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Handles restaurant creation and management for restaurant role users
 class RestaurantApiService {
   // Production URL (Render)
+  // Production URL (Render)
   static const String baseUrl = 'https://rescueeats.onrender.com/api';
+  // static const String baseUrl = 'http://localhost:5001/api';
   static const Duration _timeout = Duration(seconds: 30);
 
   // Helper method to get auth headers
@@ -160,6 +162,108 @@ class RestaurantApiService {
         throw FetchDataException('Cannot connect to server. Check internet.');
       }
       throw FetchDataException('Failed to fetch restaurants: ${e.toString()}');
+    }
+  }
+
+  /// Add menu item
+  Future<RestaurantModel> addMenuItem(
+    String restaurantId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/restaurants/$restaurantId/menu'),
+            headers: headers,
+            body: jsonEncode(data),
+          )
+          .timeout(_timeout);
+
+      final responseData = _processResponse(response);
+      final restaurantData = responseData['restaurant'] ?? responseData;
+
+      return RestaurantModel.fromJson(restaurantData);
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      throw FetchDataException('Failed to add menu item: ${e.toString()}');
+    }
+  }
+
+  /// Update menu item
+  Future<RestaurantModel> updateMenuItem(
+    String restaurantId,
+    String itemId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/restaurants/$restaurantId/menu/$itemId'),
+            headers: headers,
+            body: jsonEncode(data),
+          )
+          .timeout(_timeout);
+
+      final responseData = _processResponse(response);
+      final restaurantData = responseData['restaurant'] ?? responseData;
+
+      return RestaurantModel.fromJson(restaurantData);
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      throw FetchDataException('Failed to update menu item: ${e.toString()}');
+    }
+  }
+
+  /// Delete menu item
+  Future<RestaurantModel> deleteMenuItem(
+    String restaurantId,
+    String itemId,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/restaurants/$restaurantId/menu/$itemId'),
+            headers: headers,
+          )
+          .timeout(_timeout);
+
+      final responseData = _processResponse(response);
+      final restaurantData = responseData['restaurant'] ?? responseData;
+
+      return RestaurantModel.fromJson(restaurantData);
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      throw FetchDataException('Failed to delete menu item: ${e.toString()}');
+    }
+  }
+
+  /// Get restaurant details (Public)
+  Future<RestaurantModel> getRestaurantDetails(String id) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/restaurants/$id'))
+          .timeout(_timeout);
+
+      final responseData = _processResponse(response);
+      final restaurantData = responseData['restaurant'] ?? responseData;
+
+      return RestaurantModel.fromJson(restaurantData);
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      if (e.toString().contains('SocketException')) {
+        throw FetchDataException('Cannot connect to server. Check internet.');
+      }
+      throw FetchDataException('Failed to fetch restaurant: ${e.toString()}');
     }
   }
 }

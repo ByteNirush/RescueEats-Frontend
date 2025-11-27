@@ -8,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminApiService {
   // Production URL (Render)
+  // Production URL (Render)
   static const String baseUrl = 'https://rescueeats.onrender.com/api';
+  // static const String baseUrl = 'http://localhost:5001/api';
   static const Duration _timeout = Duration(seconds: 30);
 
   // In-memory cache
@@ -172,33 +174,6 @@ class AdminApiService {
     }
   }
 
-  /// Update user role (mock - would need backend endpoint)
-  Future<UserModel> updateUserRole(String id, UserRole role) async {
-    try {
-      // TODO: Implement when backend supports it
-      await Future.delayed(const Duration(milliseconds: 500));
-      clearCache(); // Invalidate cache
-
-      // Return updated user (mock)
-      final users = await getAllUsers();
-      final user = users.firstWhere((u) => u.id == id);
-      return user.copyWith(role: role);
-    } catch (e) {
-      throw FetchDataException('Failed to update user role: ${e.toString()}');
-    }
-  }
-
-  /// Delete user (mock - would need backend endpoint)
-  Future<void> deleteUser(String id) async {
-    try {
-      // TODO: Implement when backend supports it
-      await Future.delayed(const Duration(milliseconds: 500));
-      clearCache(); // Invalidate cache
-    } catch (e) {
-      throw FetchDataException('Failed to delete user: ${e.toString()}');
-    }
-  }
-
   // ============ Restaurant Management ============
 
   /// Get all restaurants (REAL DATA)
@@ -226,34 +201,6 @@ class AdminApiService {
         throw FetchDataException('Cannot connect to server. Check internet.');
       }
       throw FetchDataException('Failed to fetch restaurants: ${e.toString()}');
-    }
-  }
-
-  /// Update restaurant (mock - would need backend endpoint)
-  Future<RestaurantModel> updateRestaurant(
-    String id,
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      // TODO: Implement when backend supports it
-      await Future.delayed(const Duration(milliseconds: 500));
-      clearCache();
-
-      final restaurants = await getAllRestaurants();
-      return restaurants.firstWhere((r) => r.id == id);
-    } catch (e) {
-      throw FetchDataException('Failed to update restaurant: ${e.toString()}');
-    }
-  }
-
-  /// Delete restaurant (mock - would need backend endpoint)
-  Future<void> deleteRestaurant(String id) async {
-    try {
-      // TODO: Implement when backend supports it
-      await Future.delayed(const Duration(milliseconds: 500));
-      clearCache();
-    } catch (e) {
-      throw FetchDataException('Failed to delete restaurant: ${e.toString()}');
     }
   }
 

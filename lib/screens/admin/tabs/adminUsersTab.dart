@@ -256,6 +256,8 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 ],
               ),
             ),
+            // Edit Role and Delete User disabled - backend doesn't support these operations
+            /*
             const PopupMenuItem(
               value: 'edit',
               child: Row(
@@ -276,19 +278,13 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 ],
               ),
             ),
+            */
           ],
           onSelected: (value) {
-            switch (value) {
-              case 'view':
-                _showUserDetails(user);
-                break;
-              case 'edit':
-                _showEditRoleDialog(user);
-                break;
-              case 'delete':
-                _showDeleteConfirmation(user);
-                break;
+            if (value == 'view') {
+              _showUserDetails(user);
             }
+            // Edit and Delete disabled - not supported by backend
           },
         ),
       ),
@@ -355,94 +351,6 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
           Text(
             value,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditRoleDialog(UserModel user) {
-    UserRole selectedRole = user.role;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Edit User Role'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Change role for ${user.name}'),
-              const SizedBox(height: 16),
-              ...UserRole.values.map(
-                (role) => RadioListTile<UserRole>(
-                  title: Text(_getRoleName(role)),
-                  value: role,
-                  groupValue: selectedRole,
-                  onChanged: (value) {
-                    setState(() => selectedRole = value!);
-                  },
-                  activeColor: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                ref
-                    .read(adminControllerProvider.notifier)
-                    .updateUserRole(user.id, selectedRole);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'User role updated to ${_getRoleName(selectedRole)}',
-                    ),
-                    backgroundColor: AppColors.primary,
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Update'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showDeleteConfirmation(UserModel user) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${user.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(adminControllerProvider.notifier).deleteUser(user.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('User deleted'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

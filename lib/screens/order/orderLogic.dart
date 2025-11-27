@@ -35,7 +35,10 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
             OrderModel(
               id: order.id,
               restaurantId: order.restaurantId,
+              restaurantName: order.restaurantName,
+              restaurantImage: order.restaurantImage,
               deliveryAddress: order.deliveryAddress,
+              contactPhone: order.contactPhone,
               totalAmount: order.totalAmount,
               items: order.items,
               status: newStatus, // New Status
@@ -83,6 +86,7 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
               restaurantName: order.restaurantName,
               restaurantImage: order.restaurantImage,
               deliveryAddress: order.deliveryAddress,
+              contactPhone: order.contactPhone,
               totalAmount: order.totalAmount,
               items: order.items,
               status: 'cancelled',

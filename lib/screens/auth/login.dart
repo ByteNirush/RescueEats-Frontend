@@ -283,43 +283,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       SizedBox(height: context.spacing.medium),
 
-                      // Continue with Google Button
+                      // Google Sign-In disabled - not supported by backend
                       SizedBox(
                         width: double.infinity,
                         height: context.sizes.buttonHeight,
                         child: OutlinedButton.icon(
-                          onPressed: isLoading
-                              ? null
-                              : () {
-                                  ref
-                                      .read(authProvider.notifier)
-                                      .signInWithGoogle();
-                                },
+                          onPressed: null, // Disabled until backend supports it
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.black26, width: 1.5),
+                            side: BorderSide(color: Colors.black12, width: 1.5),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            backgroundColor: Colors.white,
+                            backgroundColor: Colors.grey[100],
                           ),
                           icon: Image.asset(
                             'assets/icons/google_icon.png',
                             height: 24,
                             width: 24,
+                            color: Colors.grey,
                             errorBuilder: (context, error, stackTrace) {
                               return Icon(
                                 Icons.g_mobiledata,
-                                color: Color(0xFFFF6B00),
+                                color: Colors.grey,
                                 size: 28,
                               );
                             },
                           ),
                           label: Text(
-                            'Continue with Google',
+                            'Google Sign-In (Coming Soon)',
                             style: TextStyle(
                               fontSize: context.text.bodyMedium,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: Colors.grey,
                             ),
                           ),
                         ),

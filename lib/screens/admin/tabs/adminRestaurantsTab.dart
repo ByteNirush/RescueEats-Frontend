@@ -284,6 +284,8 @@ class _AdminRestaurantsTabState extends ConsumerState<AdminRestaurantsTab> {
                     ],
                   ),
                 ),
+                // Delete Restaurant disabled - backend doesn't support this operation
+                /*
                 const PopupMenuItem(
                   value: 'delete',
                   child: Row(
@@ -294,6 +296,7 @@ class _AdminRestaurantsTabState extends ConsumerState<AdminRestaurantsTab> {
                     ],
                   ),
                 ),
+                */
               ],
               onSelected: (value) {
                 switch (value) {
@@ -303,9 +306,7 @@ class _AdminRestaurantsTabState extends ConsumerState<AdminRestaurantsTab> {
                   case 'toggle':
                     _toggleRestaurantStatus(restaurant);
                     break;
-                  case 'delete':
-                    _showDeleteConfirmation(restaurant);
-                    break;
+                  // Delete disabled - not supported by backend
                 }
               },
             ),
@@ -381,38 +382,6 @@ class _AdminRestaurantsTabState extends ConsumerState<AdminRestaurantsTab> {
         );
       }
     }
-  }
-
-  void _showDeleteConfirmation(RestaurantModel restaurant) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Restaurant'),
-        content: Text('Are you sure you want to delete ${restaurant.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ref
-                  .read(adminControllerProvider.notifier)
-                  .deleteRestaurant(restaurant.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Restaurant deleted'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showRestaurantDetails(RestaurantModel restaurant) {

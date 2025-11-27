@@ -10,6 +10,9 @@ import 'package:rescueeats/screens/auth/provider/authprovider.dart';
 import 'package:rescueeats/screens/auth/provider/authstate.dart';
 import 'package:rescueeats/screens/auth/signup.dart';
 import 'package:rescueeats/screens/home/homescreen.dart';
+import 'package:rescueeats/screens/order/cartScreen.dart';
+import 'package:rescueeats/screens/order/orderListScreen.dart';
+import 'package:rescueeats/screens/order/orderDetailScreen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authStatus = ref.watch(authStatusProvider);
@@ -84,6 +87,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
           child: const CreateMyRestaurantScreen(),
         ),
+      ),
+      // Cart Screen
+      GoRoute(
+        path: RouteConstants.cart,
+        name: RouteConstants.cartName,
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const CartScreen()),
+      ),
+      // Orders List
+      GoRoute(
+        path: RouteConstants.orders,
+        name: RouteConstants.ordersName,
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const OrderListScreen()),
+      ),
+      // Order Details
+      GoRoute(
+        path: RouteConstants.orderDetails,
+        name: RouteConstants.orderDetailsName,
+        pageBuilder: (context, state) {
+          final orderId = state.pathParameters['id']!;
+          return MaterialPage(
+            key: state.pageKey,
+            child: OrderDetailScreen(orderId: orderId),
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) =>

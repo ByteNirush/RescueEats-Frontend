@@ -173,176 +173,248 @@ class CustomerOrdersTab extends ConsumerWidget {
   ) {
     final isCancelable = order.status.toLowerCase() == 'pending';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Top Row: Restaurant & Price
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                order.restaurantName.isNotEmpty
-                    ? order.restaurantName
-                    : "Restaurant", // Fallback
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Text(
-              "Rs. ${order.totalAmount.toStringAsFixed(0)}",
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-              ), // Orange Price
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-
-        // Date & Status
-        Row(
-          children: [
-            Text(
-              _formatDate(order.createdAt),
-              style: TextStyle(color: Colors.grey[500], fontSize: 13),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            _buildSimpleStatus(order.status),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // Items
-        Text(
-          order.items
-              .map(
-                (e) =>
-                    "${e.quantity}x ${e.menuItemName.isNotEmpty ? e.menuItemName : 'Item'}",
-              )
-              .join(" • "),
-          style: TextStyle(color: Colors.grey[700], fontSize: 14),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-
-        const SizedBox(height: 16),
-
-        // Action Buttons
-        Row(
-          children: [
-            if (isCancelable) ...[
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    try {
-                      await ref
-                          .read(orderControllerProvider.notifier)
-                          .cancelOrder(order.id);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Order cancelled")),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Failed to cancel: $e")),
-                        );
-                      }
-                    }
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    foregroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
+            // Top Row: Restaurant Image, Name & Price
+            Row(
+              children: [
+                // Restaurant Image
+                if (order.restaurantImage.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      order.restaurantImage,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.restaurant, color: Colors.grey[400]),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 0),
+                    child: Icon(Icons.restaurant, color: Colors.grey[400]),
                   ),
-                  child: const Text("Cancel"),
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary, // Orange Background
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.restaurantName.isNotEmpty
+                            ? order.restaurantName
+                            : "Restaurant",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatDate(order.createdAt),
+                        style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                      ),
+                    ],
                   ),
-                  elevation: 0,
                 ),
-                child: const Text(
-                  "Track",
-                  style: TextStyle(color: Colors.white),
+                Text(
+                  "Rs. ${order.totalAmount.toStringAsFixed(0)}",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Status Badge
+            _buildEnhancedStatus(order.status),
+            const SizedBox(height: 12),
+
+            // Items
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
               ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.shopping_bag_outlined,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      order.items
+                          .map(
+                            (e) =>
+                                "${e.quantity}x ${e.menuItemName.isNotEmpty ? e.menuItemName : 'Item'}",
+                          )
+                          .join(" • "),
+                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Action Buttons
+            Row(
+              children: [
+                if (isCancelable) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(orderControllerProvider.notifier)
+                              .cancelOrder(order.id);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Order cancelled")),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Failed to cancel: $e")),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.cancel_outlined, size: 18),
+                      label: const Text("Cancel"),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        foregroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.location_on, size: 18),
+                    label: const Text("Track"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 2,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Divider(height: 1, color: Colors.grey[100]),
-      ],
+      ),
     );
   }
 
-  Widget _buildSimpleStatus(String status) {
+  Widget _buildEnhancedStatus(String status) {
     Color color;
+    Color bgColor;
+    IconData icon;
     String text = status.toUpperCase();
 
     switch (status.toLowerCase()) {
       case 'pending':
-        color = Colors.orange;
+        color = Colors.orange.shade700;
+        bgColor = Colors.orange.shade50;
+        icon = Icons.schedule;
         break;
       case 'preparing':
-        color = Colors.blue;
+        color = Colors.blue.shade700;
+        bgColor = Colors.blue.shade50;
+        icon = Icons.restaurant_menu;
         break;
       case 'ready':
-        color = Colors.purple;
+        color = Colors.purple.shade700;
+        bgColor = Colors.purple.shade50;
+        icon = Icons.check_circle_outline;
         break;
       case 'out_for_delivery':
-        color = Colors.indigo;
+        color = Colors.indigo.shade700;
+        bgColor = Colors.indigo.shade50;
+        icon = Icons.delivery_dining;
+        text = 'OUT FOR DELIVERY';
         break;
       case 'delivered':
-        color = Colors.green;
+        color = Colors.green.shade700;
+        bgColor = Colors.green.shade50;
+        icon = Icons.check_circle;
         break;
       case 'cancelled':
-        color = Colors.red;
+        color = Colors.red.shade700;
+        bgColor = Colors.red.shade50;
+        icon = Icons.cancel;
         break;
       default:
-        color = Colors.grey;
+        color = Colors.grey.shade700;
+        bgColor = Colors.grey.shade50;
+        icon = Icons.info_outline;
     }
 
-    return Row(
-      children: [
-        Icon(Icons.circle, size: 8, color: color),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: TextStyle(
-            color: color,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

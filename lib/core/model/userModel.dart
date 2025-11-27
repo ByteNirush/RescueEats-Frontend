@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:rescueeats/core/model/addressModel.dart';
 
 // 1. Define the Enum for Roles
 enum UserRole { user, restaurant, delivery, admin }
@@ -9,8 +10,9 @@ class UserModel extends Equatable {
   final String email;
   final String? phoneNumber;
   final String? profileImage;
-  final UserRole role; // 2. Add this field
+  final UserRole role;
   final DateTime createdAt;
+  final List<AddressModel> addresses; // Added addresses
 
   const UserModel({
     required this.id,
@@ -18,8 +20,9 @@ class UserModel extends Equatable {
     required this.email,
     this.phoneNumber,
     this.profileImage,
-    this.role = UserRole.user, // Default to user
+    this.role = UserRole.user,
     required this.createdAt,
+    this.addresses = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -29,7 +32,6 @@ class UserModel extends Equatable {
       email: (json['email'] ?? '') as String,
       phoneNumber: (json['phone'] ?? json['phoneNumber']) as String?,
       profileImage: json['profileImage'] as String?,
-      // 3. Parse the role from JSON
       role: UserRole.values.firstWhere(
         (e) => e.name == (json['role'] ?? 'user'),
         orElse: () => UserRole.user,
@@ -37,6 +39,11 @@ class UserModel extends Equatable {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
+      addresses:
+          (json['addresses'] as List<dynamic>?)
+              ?.map((e) => AddressModel.fromJson(e))
+              .toList() ??
+          [],
     );
   }
 
@@ -47,8 +54,9 @@ class UserModel extends Equatable {
       'email': email,
       'phoneNumber': phoneNumber,
       'profileImage': profileImage,
-      'role': role.name, // Save role as string
+      'role': role.name,
       'createdAt': createdAt.toIso8601String(),
+      'addresses': addresses.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -60,6 +68,7 @@ class UserModel extends Equatable {
     String? profileImage,
     UserRole? role,
     DateTime? createdAt,
+    List<AddressModel>? addresses,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -69,6 +78,7 @@ class UserModel extends Equatable {
       profileImage: profileImage ?? this.profileImage,
       role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
+      addresses: addresses ?? this.addresses,
     );
   }
 
@@ -81,5 +91,6 @@ class UserModel extends Equatable {
     profileImage,
     role,
     createdAt,
+    addresses,
   ];
 }

@@ -1,0 +1,29 @@
+{
+    "project_info": {
+        "project_number": "931908141194",
+        "project_id": "rescueeats-52178",
+        "storage_bucket": "rescueeats-52178.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:931908141194:android:1bf6e5e7209ea2d048ad73",
+                "android_client_info": {
+                    "package_name": "com.rescue.eats"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDfoDz1EVYBqaDl79jaPsv05ksQbfXkp-g"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

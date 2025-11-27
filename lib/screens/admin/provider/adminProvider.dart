@@ -89,41 +89,47 @@ class AdminController extends StateNotifier<AsyncValue<void>> {
   AdminController(this._apiService, this._ref)
     : super(const AsyncValue.data(null));
 
+  // The following methods are commented out because the backend does not support them yet
+  // Uncomment when backend endpoints are implemented
+
+  /*
   Future<void> updateUserRole(String userId, UserRole role) async {
     state = const AsyncValue.loading();
     try {
-      await _apiService.updateUserRole(userId, role);
+      // await _apiService.updateUserRole(userId, role);
       state = const AsyncValue.data(null);
-      // Refresh users list
       _ref.invalidate(allUsersProvider);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
+  */
 
+  /*
   Future<void> deleteUser(String userId) async {
     state = const AsyncValue.loading();
     try {
-      await _apiService.deleteUser(userId);
+      // await _apiService.deleteUser(userId);
       state = const AsyncValue.data(null);
-      // Refresh users list
       _ref.invalidate(allUsersProvider);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
+  */
 
+  /*
   Future<void> deleteRestaurant(String restaurantId) async {
     state = const AsyncValue.loading();
     try {
-      await _apiService.deleteRestaurant(restaurantId);
+      // await _apiService.deleteRestaurant(restaurantId);
       state = const AsyncValue.data(null);
-      // Refresh restaurants list
       _ref.invalidate(allRestaurantsProvider);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
+  */
 
   Future<void> createRestaurant(Map<String, dynamic> data) async {
     state = const AsyncValue.loading();

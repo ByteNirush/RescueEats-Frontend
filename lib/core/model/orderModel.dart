@@ -27,13 +27,16 @@ class OrderItem extends Equatable {
       mImage = json['menuItem']['image'] ?? '';
     } else if (json['menuItem'] is String) {
       mId = json['menuItem'];
+    } else if (json['productId'] != null) {
+      // Handle backend structure where ID is in productId
+      mId = json['productId'];
     }
 
     return OrderItem(
       menuId: mId,
-      menuItemName: mName,
-      menuItemImage: mImage,
-      quantity: json['quantity'] ?? 0,
+      menuItemName: mName.isNotEmpty ? mName : (json['name'] ?? ''),
+      menuItemImage: mImage.isNotEmpty ? mImage : (json['image'] ?? ''),
+      quantity: json['quantity'] ?? json['qty'] ?? 0,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
     );
   }
@@ -55,14 +58,27 @@ class OrderItem extends Equatable {
 class OrderModel extends Equatable {
   final String id;
   final String restaurantId;
-  final String restaurantName; // Added for display
-  final String restaurantImage; // Added for display
+  final String restaurantName;
+  final String restaurantImage;
   final List<OrderItem> items;
   final double totalAmount;
   final String status;
   final String deliveryAddress;
+  final String? contactPhone;
   final String paymentMethod;
   final DateTime createdAt;
+
+  // Canceled Order Fields
+  final bool isCanceled;
+  final double? originalPrice;
+  final double discountPercent;
+  final double? discountedPrice;
+  final DateTime? canceledAt;
+  final String cancelReason;
+
+  // Coin Redemption Fields
+  final int coinsUsed;
+  final double coinDiscount;
 
   const OrderModel({
     required this.id,
@@ -73,12 +89,20 @@ class OrderModel extends Equatable {
     required this.totalAmount,
     required this.status,
     required this.deliveryAddress,
+    this.contactPhone,
     required this.paymentMethod,
     required this.createdAt,
+    this.isCanceled = false,
+    this.originalPrice,
+    this.discountPercent = 0.0,
+    this.discountedPrice,
+    this.canceledAt,
+    this.cancelReason = '',
+    this.coinsUsed = 0,
+    this.coinDiscount = 0.0,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
-    // Handle restaurant as Object or String
     String rId = '';
     String rName = '';
     String rImage = '';
@@ -90,7 +114,6 @@ class OrderModel extends Equatable {
     } else if (json['restaurant'] is String) {
       rId = json['restaurant'];
     } else if (json['restaurantId'] != null) {
-      // Fallback for older mock data or different API structure
       rId = json['restaurantId'];
     }
 
@@ -104,26 +127,46 @@ class OrderModel extends Equatable {
               ?.map((e) => OrderItem.fromJson(e))
               .toList() ??
           [],
-      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
+      totalAmount: (json['totalAmount'] ?? json['total'] ?? 0).toDouble(),
       status: json['status'] ?? 'pending',
       deliveryAddress: json['deliveryAddress'] ?? '',
+      contactPhone: json['contactPhone'],
       paymentMethod: json['paymentMethod'] ?? 'cod',
       createdAt: DateTime.parse(
         json['createdAt'] ?? DateTime.now().toIso8601String(),
       ),
+      isCanceled: json['isCanceled'] ?? false,
+      originalPrice: (json['originalPrice'] as num?)?.toDouble(),
+      discountPercent: (json['discountPercent'] as num?)?.toDouble() ?? 0.0,
+      discountedPrice: (json['discountedPrice'] as num?)?.toDouble(),
+      canceledAt: json['canceledAt'] != null
+          ? DateTime.parse(json['canceledAt'])
+          : null,
+      cancelReason: json['cancelReason'] ?? '',
+      coinsUsed: json['coinsUsed'] ?? 0,
+      coinDiscount: (json['coinDiscount'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
-      'restaurant': restaurantId, // API expects 'restaurant'
+      'restaurant': restaurantId,
       'items': items.map((e) => e.toJson()).toList(),
       'totalAmount': totalAmount,
       'status': status,
       'deliveryAddress': deliveryAddress,
+      'contactPhone': contactPhone,
       'paymentMethod': paymentMethod,
       'createdAt': createdAt.toIso8601String(),
+      'isCanceled': isCanceled,
+      'originalPrice': originalPrice,
+      'discountPercent': discountPercent,
+      'discountedPrice': discountedPrice,
+      'canceledAt': canceledAt?.toIso8601String(),
+      'cancelReason': cancelReason,
+      'coinsUsed': coinsUsed,
+      'coinDiscount': coinDiscount,
     };
   }
 
@@ -137,7 +180,16 @@ class OrderModel extends Equatable {
     totalAmount,
     status,
     deliveryAddress,
+    contactPhone,
     paymentMethod,
     createdAt,
+    isCanceled,
+    originalPrice,
+    discountPercent,
+    discountedPrice,
+    canceledAt,
+    cancelReason,
+    coinsUsed,
+    coinDiscount,
   ];
 }

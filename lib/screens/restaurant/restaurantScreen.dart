@@ -160,7 +160,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
           ),
           tabs: const [
             Tab(text: "New"),
-            Tab(text: "Cooking"),
+            Tab(text: "Preparing"),
             Tab(text: "Ready"),
           ],
         ),
@@ -174,7 +174,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
           controller: _tabController,
           children: [
             _buildOrderList(orders, 'pending'),
-            _buildOrderList(orders, 'cooking'),
+            _buildOrderList(orders, 'preparing'),
             _buildOrderList(orders, 'ready'),
           ],
         ),
@@ -342,10 +342,11 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      order.id,
+                      "#${order.id.substring(order.id.length - 6).toUpperCase()}", // Short ID
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: _getStatusColor(order.status),
+                        fontSize: 16,
                       ),
                     ),
                   ],
@@ -367,20 +368,42 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Customer Info (if we had it, for now just Delivery Address or generic)
                 Row(
                   children: [
                     const Icon(
-                      Icons.person_outline,
+                      Icons.location_on_outlined,
                       size: 16,
                       color: Colors.grey,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      "Customer", // Placeholder as customerName is removed
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    Expanded(
+                      child: Text(
+                        order.deliveryAddress,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
+                if (order.contactPhone != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.phone_outlined,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        order.contactPhone!,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ],
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Divider(height: 1),
@@ -389,38 +412,77 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
                 // Items List
                 ...order.items.map(
                   (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: 8,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: Colors.grey[300]!),
                           ),
                           child: Text(
                             "${item.quantity}x",
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 14,
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            item.menuId, // Using menuId as name for now
-                            style: const TextStyle(fontSize: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.menuItemName.isNotEmpty
+                                    ? item.menuItemName
+                                    : "Item",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              // Notes/Customizations could go here
+                            ],
+                          ),
+                        ),
+                        Text(
+                          "Rs. ${item.price * item.quantity}",
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Total
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Total",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "Rs. ${order.totalAmount}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
@@ -433,13 +495,13 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
                     onPressed: () {
                       String nextStatus = 'pending';
                       if (order.status == 'pending') {
-                        nextStatus = 'cooking';
-                      }
-                      if (order.status == 'cooking') {
+                        nextStatus = 'preparing'; // Changed from cooking
+                      } else if (order.status == 'preparing') {
+                        // Changed from cooking
                         nextStatus = 'ready';
-                      }
-                      if (order.status == 'ready') {
-                        nextStatus = 'pickedUp';
+                      } else if (order.status == 'ready') {
+                        nextStatus =
+                            'out_for_delivery'; // Changed to standard flow
                       }
                       ref
                           .read(orderControllerProvider.notifier)
@@ -474,7 +536,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
     switch (status) {
       case 'pending':
         return Colors.orange;
-      case 'cooking':
+      case 'preparing': // Changed from cooking
         return Colors.blue;
       case 'ready':
         return Colors.green;
@@ -487,7 +549,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
     switch (status) {
       case 'pending':
         return "Start Cooking";
-      case 'cooking':
+      case 'preparing': // Changed from cooking
         return "Mark Ready";
       case 'ready':
         return "Handover to Driver";

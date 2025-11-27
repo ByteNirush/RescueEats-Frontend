@@ -2,429 +2,474 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rescueeats/core/appTheme/appColors.dart';
+import 'package:rescueeats/core/model/restaurantModel.dart';
 import 'package:rescueeats/core/model/menuItemModel.dart';
-import 'package:rescueeats/core/utils/responsive_utils.dart';
+import 'package:rescueeats/core/services/restaurantApiService.dart';
 import 'package:rescueeats/features/providers/cart_provider.dart';
-import 'package:rescueeats/features/providers/restaurant_detail_provider.dart';
-import 'package:rescueeats/screens/order/cartScreen.dart';
+import 'package:rescueeats/features/routes/routeconstants.dart';
 
-class RestaurantDetailScreen extends ConsumerStatefulWidget {
+final restaurantDetailsProvider =
+    FutureProvider.family<RestaurantModel, String>((ref, id) async {
+      final apiService = RestaurantApiService();
+      return apiService.getRestaurantDetails(id);
+    });
+
+class RestaurantDetailScreen extends ConsumerWidget {
   final String restaurantId;
-  final String? restaurantName;
-  final String? imageUrl;
-  final String? heroTag;
+  final String restaurantName;
+  final String imageUrl;
+  final String heroTag;
   final bool isOpen;
 
   const RestaurantDetailScreen({
     super.key,
     required this.restaurantId,
-    this.restaurantName,
-    this.imageUrl,
-    this.heroTag,
-    this.isOpen = true,
+    required this.restaurantName,
+    required this.imageUrl,
+    required this.heroTag,
+    required this.isOpen,
   });
 
   @override
-  ConsumerState<RestaurantDetailScreen> createState() =>
-      _RestaurantDetailScreenState();
-}
-
-class _RestaurantDetailScreenState
-    extends ConsumerState<RestaurantDetailScreen> {
-  @override
-  Widget build(BuildContext context) {
-    final asyncMenu = ref.watch(restaurantMenuProvider(widget.restaurantId));
-    final cart = ref.watch(cartProvider);
-    // We can also fetch full restaurant details if needed, but we have basic info
-    // final asyncRestaurant = ref.watch(restaurantDetailsProvider(widget.restaurantId));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final restaurantAsync = ref.watch(restaurantDetailsProvider(restaurantId));
+    final cartState = ref.watch(cartProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          // 1. Header Image (Standard Hero)
-          SliverAppBar(
-            expandedHeight: context.isMobile ? 200.0 : 250.0,
-            floating: false,
-            pinned: true,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            iconTheme: const IconThemeData(color: Colors.white),
-            leading: Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, size: 20),
-                onPressed: () => context.pop(),
-              ),
-            ),
-            actions: [
-              Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
-                  shape: BoxShape.circle,
+      body: restaurantAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+        error: (err, stack) => Center(child: Text('Error: $err')),
+        data: (restaurant) {
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 250,
+                pinned: true,
+                backgroundColor: Colors.white,
+                leading: IconButton(
+                  icon: const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.arrow_back, color: Colors.black),
+                  ),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                child: IconButton(
-                  icon: const Icon(Icons.search, size: 20),
-                  onPressed: () {},
-                ),
-              ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Hero(
-                tag: widget.heroTag ?? widget.restaurantId,
-                child: Image.network(
-                  widget.imageUrl ??
-                      "https://via.placeholder.com/800x400/FF6B35/FFFFFF?text=Restaurant",
-                  fit: BoxFit.cover,
-                  errorBuilder: (c, e, s) => Container(color: Colors.grey[300]),
-                ),
-              ),
-            ),
-          ),
-
-          // 2. Restaurant Info (Distinct Card Style)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(context.padding.medium),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.restaurantName ?? "Restaurant",
-                    style: TextStyle(
-                      fontSize: context.text.h1,
-                      fontWeight:
-                          FontWeight.w900, // Heavier font for distinct look
-                      letterSpacing: -0.5,
-                      height: 1.1,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Hero(
+                    tag: heroTag,
+                    child: Image.network(
+                      restaurant.image.isNotEmpty ? restaurant.image : imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) =>
+                          Container(color: Colors.grey[300]),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (!widget.isOpen)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: Colors.red,
-                            size: 16,
+                          Expanded(
+                            child: Text(
+                              restaurant.name,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "Restaurant is currently closed",
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: restaurant.isOpen
+                                  ? Colors.green
+                                  : Colors.red,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              restaurant.isOpen ? "OPEN" : "CLOSED",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  Row(
-                    children: [
+                      const SizedBox(height: 8),
                       Text(
-                        "Fast Food", // Placeholder or fetch from details
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        restaurant.cuisineType.join(" • "),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Icon(
-                          Icons.circle,
-                          size: 4,
-                          color: Colors.grey[300],
-                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              restaurant.address,
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        "Burger", // Placeholder
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "${restaurant.openingHours.open} - ${restaurant.openingHours.close}",
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
                       ),
-                      const Spacer(),
-                      const Icon(Icons.star, color: Colors.amber, size: 18),
-                      const SizedBox(width: 4),
+                      const SizedBox(height: 16),
+                      if (restaurant.description.isNotEmpty) ...[
+                        Text(
+                          restaurant.description,
+                          style: TextStyle(color: Colors.grey[800]),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                       const Text(
-                        "4.5", // Placeholder
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        "Menu",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      Text(
-                        " (500+)",
-                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // Distinct Info Container
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB), // Very subtle grey
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey[100]!),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildInfoColumn(Icons.access_time, "20-30", "min"),
-                        Container(
-                          width: 1,
-                          height: 30,
-                          color: Colors.grey[300],
-                        ),
-                        _buildInfoColumn(
-                          Icons.delivery_dining,
-                          "Rs. 50",
-                          "Delivery",
-                        ),
-                        Container(
-                          width: 1,
-                          height: 30,
-                          color: Colors.grey[300],
-                        ),
-                        _buildInfoColumn(
-                          Icons.local_offer,
-                          "Rs. 100",
-                          "Min Off",
-                        ),
-                      ],
+                ),
+              ),
+              if (restaurant.menu.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Text("No menu items available"),
                     ),
                   ),
-                  SizedBox(height: context.spacing.section),
-                  Text(
-                    "Menu",
-                    style: TextStyle(
-                      fontSize: context.text.h3,
-                      fontWeight: FontWeight.w800,
-                    ),
+                )
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final item = restaurant.menu[index];
+                    return _buildMenuItem(context, item);
+                  }, childCount: restaurant.menu.length),
+                ),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
+          );
+        },
+      ),
+      bottomNavigationBar: cartState.items.isNotEmpty
+          ? Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
                   ),
                 ],
               ),
-            ),
-          ),
-
-          // 3. Menu Items (Text Only, No Images)
-          SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: context.padding.medium),
-            sliver: asyncMenu.when(
-              loading: () => const SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                ),
-              ),
-              error: (err, stack) => SliverToBoxAdapter(
-                child: Center(child: Text("Error loading menu: $err")),
-              ),
-              data: (menuItems) {
-                if (menuItems.isEmpty) {
-                  return const SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: Text("No menu items available"),
-                      ),
-                    ),
-                  );
-                }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    return _buildTextOnlyMenuItem(menuItems[index]);
-                  }, childCount: menuItems.length),
-                );
-              },
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-
-      // 4. Floating Cart Button
-      floatingActionButton: cart.items.isEmpty
-          ? null
-          : Container(
-              width: context.widthPercent(90),
-              constraints: const BoxConstraints(maxWidth: 600),
-              padding: const EdgeInsets.symmetric(horizontal: 0),
-              child: FloatingActionButton.extended(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CartScreen()),
-                  );
-                },
-                backgroundColor: AppColors.primary,
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                label: Row(
+              child: SafeArea(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "${cart.totalItems} Items",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${cartState.totalItems} Items',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          'Rs. ${cartState.totalAmount}',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    const Text(
-                      "View Cart",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    ElevatedButton(
+                      onPressed: () {
+                        context.push(RouteConstants.cart);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      "Rs. ${cart.totalAmount}",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                      child: const Row(
+                        children: [
+                          Text(
+                            'View Cart',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.shopping_cart_outlined, size: 20),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+            )
+          : null,
     );
   }
 
-  Widget _buildInfoColumn(IconData icon, String top, String bottom) {
-    return Column(
-      children: [
-        Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(height: 4),
-        Text(
-          top,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        Text(
-          bottom,
-          style: TextStyle(
-            color: Colors.grey[500],
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _buildMenuItem(BuildContext context, MenuItemModel item) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final cartState = ref.watch(cartProvider);
+        final cartNotifier = ref.read(cartProvider.notifier);
 
-  Widget _buildTextOnlyMenuItem(MenuItemModel item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Text Content Area
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Rs. ${item.price}",
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
+        // Find if this item is in cart
+        final cartItem = cartState.items.firstWhere(
+          (ci) => ci.menuItem.id == item.id,
+          orElse: () => CartItem(menuItem: item, quantity: 0),
+        );
+        final quantity = cartItem.quantity;
 
-          // Minimal Add Button
-          Center(
-            child: InkWell(
-              onTap: widget.isOpen
-                  ? () {
-                      ref
-                          .read(cartProvider.notifier)
-                          .addItem(
-                            item,
-                            widget.restaurantId,
-                            widget.restaurantName ?? "Restaurant",
-                          );
-                    }
-                  : null,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: widget.isOpen
-                        ? Colors.grey[300]!
-                        : Colors.grey[200]!,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                  color: widget.isOpen ? null : Colors.grey[100],
-                ),
-                child: Text(
-                  widget.isOpen ? "ADD" : "CLOSED",
-                  style: TextStyle(
-                    color: widget.isOpen ? AppColors.primary : Colors.grey,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  item.image,
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.fastfood, color: Colors.grey),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        if (item.isVeg)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 4),
+                            child: Icon(
+                              Icons.circle,
+                              color: Colors.green,
+                              size: 12,
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Rs. ${item.price}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (!item.isAvailable)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              "Unavailable",
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          )
+                        else if (quantity == 0)
+                          // Show ADD button
+                          ElevatedButton(
+                            onPressed: () {
+                              cartNotifier.addItem(
+                                item,
+                                restaurantId,
+                                restaurantName,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${item.name} added to cart'),
+                                  duration: const Duration(seconds: 1),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'ADD',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          )
+                        else
+                          // Show quantity controls
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove, size: 18),
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 32,
+                                    minHeight: 32,
+                                  ),
+                                  onPressed: () {
+                                    cartNotifier.removeItem(item.id);
+                                  },
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  child: Text(
+                                    '$quantity',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add, size: 18),
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 32,
+                                    minHeight: 32,
+                                  ),
+                                  onPressed: () {
+                                    cartNotifier.addItem(
+                                      item,
+                                      restaurantId,
+                                      restaurantName,
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

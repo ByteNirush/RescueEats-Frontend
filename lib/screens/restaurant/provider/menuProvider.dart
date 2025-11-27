@@ -1,101 +1,81 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rescueeats/core/model/menuItemModel.dart';
-import 'package:rescueeats/core/services/api_service.dart';
-import 'package:rescueeats/core/error/app_exception.dart';
+import 'package:rescueeats/core/services/restaurantApiService.dart';
 
-// Menu state
-class MenuState {
-  final List<MenuItemModel> items;
-  final bool isLoading;
-  final String? error;
+final menuProvider =
+    StateNotifierProvider<MenuNotifier, AsyncValue<List<MenuItemModel>>>((ref) {
+      return MenuNotifier(ref);
+    });
 
-  const MenuState({this.items = const [], this.isLoading = false, this.error});
+class MenuNotifier extends StateNotifier<AsyncValue<List<MenuItemModel>>> {
+  final Ref ref;
+  final RestaurantApiService _apiService = RestaurantApiService();
 
-  MenuState copyWith({
-    List<MenuItemModel>? items,
-    bool? isLoading,
-    String? error,
-  }) {
-    return MenuState(
-      items: items ?? this.items,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
-  }
-}
+  MenuNotifier(this.ref) : super(const AsyncValue.loading());
 
-// Menu notifier
-class MenuNotifier extends StateNotifier<MenuState> {
-  final ApiService _apiService;
-  String? _currentRestaurantId;
-
-  MenuNotifier(this._apiService) : super(const MenuState());
-
-  /// Fetch menu items for a restaurant
   Future<void> fetchMenu(String restaurantId) async {
-    _currentRestaurantId = restaurantId;
-    state = state.copyWith(isLoading: true, error: null);
-
     try {
-      final items = await _apiService.getRestaurantMenu(restaurantId);
-      state = state.copyWith(items: items, isLoading: false);
-    } on AppException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Failed to load menu: ${e.toString()}',
-      );
+      state = const AsyncValue.loading();
+      final restaurant = await _apiService.getRestaurantDetails(restaurantId);
+      // Assuming restaurant model has a menu field which is a list of MenuItemModel
+      // We might need to fetch menu separately if it's not in details, but based on routes it seems separate or included.
+      // Checking backend controller: getRestaurantMenu returns { menu: ... }
+      // But getRestaurantById also returns restaurant object.
+      // Let's use getRestaurantMenu for specific menu fetching if needed, or just use the restaurant details.
+      // For now, let's assume we can get it from restaurant details or a specific menu endpoint.
+      // Actually, let's use the getRestaurantMenu endpoint if available or just parse from details.
+      // The backend route `GET /:id/menu` calls `getRestaurantMenu`.
+      // But `RestaurantApiService` doesn't have `getMenu` yet, only `getRestaurantDetails`.
+      // Let's use `getRestaurantDetails` as it returns the full object including menu.
+
+      // Wait, RestaurantModel needs to have `menu` field.
+      // Let's check RestaurantModel again.
+      // It has `cuisineType`, but I don't see `menu` list in `RestaurantModel` definition I viewed earlier.
+      // I need to update RestaurantModel to include `menu`.
+
+      // For now, let's just fetch details and see.
+      // Actually, I should update RestaurantModel first.
+
+      state = AsyncValue.data(restaurant.menu);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
 
-  /// Add a new menu item
-  Future<bool> addMenuItem({
-    required String restaurantId,
-    required String name,
-    required double price,
-    required String description,
-    required String image,
-  }) async {
+  Future<void> addMenuItem(
+    String restaurantId,
+    Map<String, dynamic> data,
+  ) async {
     try {
-      final newItem = await _apiService.addMenuItem(
-        restaurantId: restaurantId,
-        name: name,
-        price: price,
-        description: description,
-        image: image,
-      );
-
-      // Add to local state
-      state = state.copyWith(items: [...state.items, newItem]);
-
-      return true;
-    } on AppException catch (e) {
-      state = state.copyWith(error: e.toString().replaceAll('Exception: ', ''));
-      return false;
+      await _apiService.addMenuItem(restaurantId, data);
+      // Refresh menu
+      await fetchMenu(restaurantId);
     } catch (e) {
-      state = state.copyWith(error: 'Failed to add item: ${e.toString()}');
-      return false;
+      rethrow;
     }
   }
 
-  /// Refresh menu (re-fetch from API)
-  Future<void> refresh() async {
-    if (_currentRestaurantId != null) {
-      await fetchMenu(_currentRestaurantId!);
+  Future<void> updateMenuItem(
+    String restaurantId,
+    String itemId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      await _apiService.updateMenuItem(restaurantId, itemId, data);
+      // Refresh menu
+      await fetchMenu(restaurantId);
+    } catch (e) {
+      rethrow;
     }
   }
 
-  /// Clear error message
-  void clearError() {
-    state = state.copyWith(error: null);
+  Future<void> deleteMenuItem(String restaurantId, String itemId) async {
+    try {
+      await _apiService.deleteMenuItem(restaurantId, itemId);
+      // Refresh menu
+      await fetchMenu(restaurantId);
+    } catch (e) {
+      rethrow;
+    }
   }
 }
-
-// Provider
-final menuProvider = StateNotifierProvider<MenuNotifier, MenuState>((ref) {
-  return MenuNotifier(ApiService());
-});

@@ -113,10 +113,14 @@ class CartScreen extends ConsumerWidget {
                         height: context.sizes.buttonHeight,
                         child: ElevatedButton(
                           onPressed: () {
+                            // TODO: Implement proper restaurant ID tracking in cart
+                            // TODO: Add user input for delivery address
+                            // TODO: Add user selection for payment method
+
                             final order = OrderModel(
                               id: 'ORD-${DateTime.now().millisecondsSinceEpoch}',
-                              restaurantId: "654321", // Hardcoded for now as CartItem doesn't have it
-                              deliveryAddress: "Lazimpat, Kathmandu",
+                              restaurantId: "", // Needs proper implementation
+                              deliveryAddress: "Address needed",
                               totalAmount: notifier.totalAmount,
                               items: cartItems
                                   .map(
@@ -129,6 +133,7 @@ class CartScreen extends ConsumerWidget {
                               status: 'pending',
                               paymentMethod: 'cod',
                               createdAt: DateTime.now(),
+                              contactPhone: "", // Needs user input
                             );
 
                             ref

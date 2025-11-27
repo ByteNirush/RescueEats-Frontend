@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 import 'package:rescueeats/core/model/userModel.dart';
 import 'package:rescueeats/screens/auth/provider/authstate.dart';
 import 'package:rescueeats/core/services/api_service.dart';
@@ -30,6 +32,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _apiService.login(emailOrPhone, password);
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
+
+      // Register FCM Token
+      try {
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        if (fcmToken != null) {
+          await _apiService.registerFcmToken(fcmToken);
+        }
+      } catch (e) {
+        print('FCM Token Error: $e');
+      }
 
       // Auto-fetch restaurant for restaurant owners
       if (user.role == UserRole.restaurant) {
@@ -74,6 +86,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
 
+      // Register FCM Token
+      try {
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        if (fcmToken != null) {
+          await _apiService.registerFcmToken(fcmToken);
+        }
+      } catch (e) {
+        print('FCM Token Error: $e');
+      }
+
       // Auto-fetch restaurant for restaurant owners
       if (user.role == UserRole.restaurant) {
         _ref.read(restaurantOwnerProvider.notifier).fetchMyRestaurant();
@@ -86,6 +108,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  // Google Sign-In is currently not supported by the backend
+  // The backend uses OAuth 2.0 web flow which is incompatible with mobile
+  // Uncomment and implement when backend adds mobile Google Auth support
+  /*
   Future<void> signInWithGoogle({UserRole role = UserRole.user}) async {
     state = state.copyWith(status: AuthStatus.loading);
 
@@ -93,29 +119,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
-        // User cancelled the sign-in
         state = state.copyWith(status: AuthStatus.unauthenticated);
         return;
       }
 
-      // Get authentication details
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // Send idToken to backend for verification
       if (googleAuth.idToken == null) {
         throw Exception('Failed to get Google ID token');
       }
 
-      final user = await _apiService.googleAuth(googleAuth.idToken!, role);
-      state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      // This would need a backend endpoint that accepts ID tokens
+      // final user = await _apiService.googleAuth(googleAuth.idToken!, role);
+      // state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      
+      throw Exception('Google Sign-In not supported yet');
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: 'Google Sign-In failed: ${e.toString()}',
+        errorMessage: 'Google Sign-In not supported: ${e.toString()}',
       );
     }
   }
+  */
 
   Future<void> logout() async {
     state = state.copyWith(status: AuthStatus.loading);

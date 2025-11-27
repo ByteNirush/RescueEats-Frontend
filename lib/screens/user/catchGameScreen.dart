@@ -721,10 +721,12 @@ class _CatchGameScreenState extends State<CatchGameScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.blue.shade100,
-              Colors.blue.shade300,
-              Colors.blue.shade400,
+              Colors.orange.shade50,
+              Colors.orange.shade100,
+              Colors.orange.shade200,
+              Colors.deepOrange.shade300,
             ],
+            stops: const [0.0, 0.3, 0.7, 1.0],
           ),
         ),
         child: SafeArea(
@@ -748,11 +750,24 @@ class _CatchGameScreenState extends State<CatchGameScreen>
                           child: Opacity(
                             opacity: p.life / p.maxLife,
                             child: Container(
-                              width: 5,
-                              height: 5,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                gradient: RadialGradient(
+                                  colors: [
+                                    p.color.withOpacity(0.9),
+                                    p.color.withOpacity(0.5),
+                                    p.color.withOpacity(0.0),
+                                  ],
+                                ),
                                 shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: p.color.withOpacity(0.5),
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -761,30 +776,57 @@ class _CatchGameScreenState extends State<CatchGameScreen>
                       // Foods
                       for (var f in foods)
                         Positioned(
-                          left: (f.x * screenWidth) - 22,
-                          top: ((f.y * (screenHeight - 180)) + 80) - 22,
+                          left: (f.x * screenWidth) - 30,
+                          top: ((f.y * (screenHeight - 180)) + 80) - 30,
                           child: Transform.rotate(
                             angle: f.rotation,
                             child: Container(
-                              width: 44,
-                              height: 44,
+                              width: 60,
+                              height: 60,
                               decoration: BoxDecoration(
-                                color: f.color,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    f.color.withOpacity(0.9),
+                                    f.color,
+                                    f.color.withOpacity(0.7),
+                                  ],
+                                  stops: const [0.0, 0.7, 1.0],
+                                ),
                                 shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 2,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: f.shouldGlow
-                                        ? Colors.amber.withOpacity(0.6)
-                                        : Colors.black26,
-                                    blurRadius: f.shouldGlow ? 10 : 3,
-                                    spreadRadius: f.shouldGlow ? 1 : 0,
+                                        ? Colors.amber.withOpacity(0.8)
+                                        : Colors.black.withOpacity(0.4),
+                                    blurRadius: f.shouldGlow ? 15 : 8,
+                                    spreadRadius: f.shouldGlow ? 2 : 1,
+                                    offset: const Offset(0, 4),
                                   ),
+                                  if (f.shouldGlow)
+                                    BoxShadow(
+                                      color: f.color.withOpacity(0.6),
+                                      blurRadius: 20,
+                                      spreadRadius: 3,
+                                    ),
                                 ],
                               ),
                               child: Center(
                                 child: Text(
                                   f.icon,
-                                  style: const TextStyle(fontSize: 22),
+                                  style: const TextStyle(
+                                    fontSize: 36,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black26,
+                                        offset: Offset(1, 1),
+                                        blurRadius: 2,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -793,43 +835,110 @@ class _CatchGameScreenState extends State<CatchGameScreen>
 
                       // Player
                       Positioned(
-                        left: (player.x * screenWidth) - 40,
-                        bottom: 30,
+                        left: (player.x * screenWidth) - 60,
+                        bottom: 20,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 100),
-                          width: 80,
-                          height: 65,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: player.isInvincible
-                                  ? [Colors.cyan.shade300, Colors.blue.shade500]
-                                  : activePowerUps[PowerUp.shield]!
-                                  ? [Colors.blue.shade400, Colors.blue.shade600]
-                                  : [
-                                      Colors.green.shade400,
-                                      Colors.green.shade600,
+                          width: 120,
+                          height: 90,
+                          child: Stack(
+                            children: [
+                              // Shadow layer
+                              Positioned(
+                                bottom: 0,
+                                left: 10,
+                                right: 10,
+                                child: Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(50),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.3),
+                                        blurRadius: 10,
+                                        spreadRadius: 2,
+                                      ),
                                     ],
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                            border:
-                                (activePowerUps[PowerUp.shield]! ||
-                                    player.isInvincible)
-                                ? Border.all(color: Colors.white, width: 2.5)
-                                : null,
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 8,
-                                offset: Offset(0, 3),
+                                  ),
+                                ),
+                              ),
+                              // Main basket
+                              Positioned(
+                                bottom: 5,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: player.isInvincible
+                                          ? [
+                                              Colors.cyan.shade200,
+                                              Colors.cyan.shade400,
+                                              Colors.blue.shade600,
+                                            ]
+                                          : activePowerUps[PowerUp.shield]!
+                                          ? [
+                                              Colors.blue.shade300,
+                                              Colors.blue.shade500,
+                                              Colors.blue.shade700,
+                                            ]
+                                          : [
+                                              Colors.brown.shade300,
+                                              Colors.brown.shade500,
+                                              Colors.brown.shade700,
+                                            ],
+                                    ),
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(20),
+                                      topRight: Radius.circular(20),
+                                      bottomLeft: Radius.circular(25),
+                                      bottomRight: Radius.circular(25),
+                                    ),
+                                    border: Border.all(
+                                      color:
+                                          (activePowerUps[PowerUp.shield]! ||
+                                              player.isInvincible)
+                                          ? Colors.white
+                                          : Colors.brown.shade800,
+                                      width: 3,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.4),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
+                                        spreadRadius: 1,
+                                      ),
+                                      if (activePowerUps[PowerUp.shield]! ||
+                                          player.isInvincible)
+                                        BoxShadow(
+                                          color: Colors.white.withOpacity(0.5),
+                                          blurRadius: 20,
+                                          spreadRadius: 2,
+                                        ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.shopping_basket,
+                                      size: 48,
+                                      color: Colors.white,
+                                      shadows: const [
+                                        Shadow(
+                                          color: Colors.black45,
+                                          offset: Offset(2, 2),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.shopping_basket,
-                              size: 32,
-                              color: Colors.white,
-                            ),
                           ),
                         ),
                       ),
