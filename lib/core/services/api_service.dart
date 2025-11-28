@@ -47,6 +47,10 @@ class ApiService {
         throw FetchDataException(
           'Service not found. The backend server may be starting up or unavailable. Please try again in a moment.',
         );
+      case 429:
+        throw FetchDataException(
+          'Server is busy (rate limit reached). Please wait 1-2 minutes and try again. This happens when the server is waking up from sleep.',
+        );
       case 500:
       case 502:
       case 503:
@@ -607,6 +611,38 @@ class ApiService {
       return _processResponse(response);
     } catch (e) {
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  /// Get current energy status
+  Future<Map<String, dynamic>?> getEnergy() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(Uri.parse('$baseUrl/game/energy'), headers: headers)
+          .timeout(const Duration(seconds: 60));
+      final data = _processResponse(response);
+      return data['energy'];
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Use 1 energy (call before starting game)
+  Future<bool> useEnergy() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/game/energy/use'),
+            headers: headers,
+            body: jsonEncode({}),
+          )
+          .timeout(const Duration(seconds: 60));
+      final data = _processResponse(response);
+      return data['success'] == true;
+    } catch (e) {
+      return false;
     }
   }
 

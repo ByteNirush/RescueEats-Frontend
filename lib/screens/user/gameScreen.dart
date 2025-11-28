@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rescueeats/core/appTheme/appColors.dart';
 import 'package:rescueeats/screens/user/catchGameScreen.dart';
 import 'package:rescueeats/core/model/game/game_session.dart';
-import 'package:rescueeats/core/model/game/daily_task.dart';
+import 'package:rescueeats/core/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
@@ -15,7 +15,6 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late EnergySystem energySystem;
-  List<DailyTask> dailyTasks = [];
   int coins = 0;
   int xp = 0;
   int level = 1;
@@ -42,45 +41,103 @@ class _GameScreenState extends State<GameScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Load daily tasks
-      final tasks = await DailyTaskManager.loadTasks();
-
-      // Check and complete daily login task
-      final lastLogin = prefs.getString('last_login_date');
-      final today = DateTime.now();
-      final todayStr = '${today.year}-${today.month}-${today.day}';
-
-      if (lastLogin != todayStr) {
-        await DailyTaskManager.completeTask(TaskType.dailyLogin);
-        await prefs.setString('last_login_date', todayStr);
-      }
-
-      // Load energy system
+      // Load energy system from backend
       EnergySystem loadedEnergy;
       try {
-        final energyJson = prefs.getString('energy_system');
-        if (energyJson != null && energyJson.isNotEmpty) {
-          final params = Uri.splitQueryString(energyJson);
+        final apiService = ApiService();
+        final energyData = await apiService.getEnergy();
+
+        if (energyData != null) {
+          final currentEnergy = energyData['current'] ?? 5;
+          // final maxEnergy = energyData['max'] ?? 5; // Not used in constructor currently
+          final minutesUntilNext = energyData['minutesUntilNext'];
+
           loadedEnergy = EnergySystem(
-            currentEnergy: int.tryParse(params['currentEnergy'] ?? '5') ?? 5,
-            lastEnergyUpdate: params['lastEnergyUpdate']?.isNotEmpty == true
-                ? DateTime.tryParse(params['lastEnergyUpdate']!)
+            currentEnergy: currentEnergy,
+            lastEnergyUpdate: minutesUntilNext != null
+                ? DateTime.now().subtract(
+                    Duration(minutes: 30 - (minutesUntilNext as int)),
+                  )
                 : null,
           );
-          loadedEnergy.regenerateEnergy();
         } else {
+          // Fallback to default if backend fetch fails
           loadedEnergy = EnergySystem();
         }
       } catch (e) {
         loadedEnergy = EnergySystem();
       }
 
+      // Fetch game data from backend API
+      int loadedCoins = 0;
+      int loadedXp = 0;
+      int loadedLevel = 1;
+
+      try {
+        // Import ApiService
+        final apiService = ApiService();
+        final gameData = await apiService.initGame();
+
+        if (gameData != null) {
+          // Extract data from backend response
+          loadedCoins = gameData['coins'] ?? 0;
+          loadedXp = gameData['xp'] ?? 0;
+          loadedLevel = gameData['level'] ?? 1;
+
+          // Cache in SharedPreferences for offline access
+          await prefs.setInt('game_coins', loadedCoins);
+          await prefs.setInt('game_xp', loadedXp);
+          await prefs.setInt('game_level', loadedLevel);
+
+          // Auto-claim daily reward
+          try {
+            final dailyRewardResult = await apiService.claimDailyReward();
+            if (dailyRewardResult['success'] == true) {
+              final reward = dailyRewardResult['reward'] ?? 0;
+              if (reward > 0) {
+                // Refresh game data to get updated coins
+                final updatedGameData = await apiService.initGame();
+                if (updatedGameData != null) {
+                  loadedCoins = updatedGameData['coins'] ?? 0;
+                  loadedXp = updatedGameData['xp'] ?? 0;
+                  loadedLevel = updatedGameData['level'] ?? 1;
+
+                  // Update cache
+                  await prefs.setInt('game_coins', loadedCoins);
+                  await prefs.setInt('game_xp', loadedXp);
+                  await prefs.setInt('game_level', loadedLevel);
+                }
+
+                // Show success message
+                if (mounted) {
+                  _showMessage(
+                    'Daily login bonus: +$reward coins! 🎉',
+                    isSuccess: true,
+                  );
+                }
+              }
+            }
+          } catch (e) {
+            // Silently fail daily reward - not critical
+          }
+        } else {
+          // Fallback to cached data if backend fails
+          loadedCoins = prefs.getInt('game_coins') ?? 0;
+          loadedXp = prefs.getInt('game_xp') ?? 0;
+          loadedLevel = prefs.getInt('game_level') ?? 1;
+        }
+      } catch (e) {
+        // Fallback to cached data on error
+        loadedCoins = prefs.getInt('game_coins') ?? 0;
+        loadedXp = prefs.getInt('game_xp') ?? 0;
+        loadedLevel = prefs.getInt('game_level') ?? 1;
+      }
+
       if (mounted) {
         setState(() {
-          coins = prefs.getInt('game_coins') ?? 0;
-          xp = prefs.getInt('game_xp') ?? 0;
-          level = prefs.getInt('game_level') ?? 1;
-          dailyTasks = tasks;
+          coins = loadedCoins;
+          xp = loadedXp;
+          level = loadedLevel;
           energySystem = loadedEnergy;
           isLoading = false;
         });
@@ -90,7 +147,6 @@ class _GameScreenState extends State<GameScreen> {
       if (mounted) {
         setState(() {
           energySystem = EnergySystem();
-          dailyTasks = DailyTask.getDefaultTasks();
           isLoading = false;
         });
       }
@@ -101,26 +157,6 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       energySystem.regenerateEnergy();
     });
-  }
-
-  Future<void> _claimTaskReward(DailyTask task) async {
-    if (!task.isCompleted || task.progress > task.target) {
-      _showMessage('Task not completed or already claimed!');
-      return;
-    }
-
-    final reward = await DailyTaskManager.claimReward(task.type);
-    if (reward > 0) {
-      setState(() {
-        coins += reward;
-        task.progress = task.target + 1; // Mark as claimed
-      });
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('game_coins', coins);
-
-      _showMessage('Claimed $reward coins! 🎉', isSuccess: true);
-    }
   }
 
   void _showMessage(String msg, {bool isSuccess = false}) {
@@ -272,60 +308,26 @@ class _GameScreenState extends State<GameScreen> {
 
               const SizedBox(height: 24),
 
-              // Daily Tasks Section
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('📋', style: TextStyle(fontSize: 24)),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Daily Tasks',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Task List
-                    for (var task in dailyTasks) _buildTaskItem(task),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
               // Play Button
               ElevatedButton(
                 onPressed: energySystem.canPlay()
                     ? () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CatchGameScreen(),
-                          ),
-                        );
-                        // Complete play games task
-                        await DailyTaskManager.completeTask(TaskType.playGames);
-                        // Reload data
-                        _loadData();
+                        // Use energy from backend
+                        final apiService = ApiService();
+                        final success = await apiService.useEnergy();
+
+                        if (success) {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CatchGameScreen(),
+                            ),
+                          );
+                          // Reload data to sync energy and coins
+                          _loadData();
+                        } else {
+                          _showMessage('Not enough energy or network error!');
+                        }
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
@@ -367,105 +369,6 @@ class _GameScreenState extends State<GameScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTaskItem(DailyTask task) {
-    final isClaimed = task.progress > task.target;
-    final canClaim = task.isCompleted && !isClaimed;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: canClaim ? Colors.green.shade200 : Colors.grey.shade200,
-          width: 2,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Icon
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
-              ],
-            ),
-            child: Center(
-              child: Text(task.icon, style: const TextStyle(fontSize: 28)),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Task Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  task.description,
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                ),
-                if (task.target > 1)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: LinearProgressIndicator(
-                      value: task.progressPercentage,
-                      backgroundColor: Colors.grey.shade300,
-                      valueColor: AlwaysStoppedAnimation(AppColors.primary),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          // Status/Claim Button
-          if (isClaimed)
-            const Icon(Icons.check_circle, color: Colors.green, size: 32)
-          else if (canClaim)
-            GestureDetector(
-              onTap: () => _claimTaskReward(task),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Claim',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            )
-          else
-            Icon(
-              Icons.radio_button_unchecked,
-              color: Colors.grey.shade400,
-              size: 32,
-            ),
-        ],
       ),
     );
   }

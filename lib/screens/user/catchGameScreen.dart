@@ -70,9 +70,6 @@ class _CatchGameScreenState extends State<CatchGameScreen>
   bool isLoadingBackend = false;
   DateTime? gameStartTime;
 
-  // Energy system
-  late EnergySystem energySystem;
-
   // Power-ups
   Map<PowerUp, bool> activePowerUps = {
     PowerUp.magnet: false,
@@ -136,35 +133,13 @@ class _CatchGameScreenState extends State<CatchGameScreen>
       final achievementsList = prefs.getStringList('achievements') ?? [];
       achievements = Set.from(achievementsList);
 
-      final energyJson = prefs.getString('energy_system');
-      if (energyJson != null && energyJson.isNotEmpty) {
-        try {
-          final params = Uri.splitQueryString(energyJson);
-          energySystem = EnergySystem(
-            currentEnergy: int.tryParse(params['currentEnergy'] ?? '5') ?? 5,
-            lastEnergyUpdate: params['lastEnergyUpdate']?.isNotEmpty == true
-                ? DateTime.tryParse(params['lastEnergyUpdate']!)
-                : null,
-          );
-          energySystem.regenerateEnergy();
-        } catch (e) {
-          energySystem = EnergySystem();
-        }
-      } else {
-        energySystem = EnergySystem();
-      }
-
       isLoadingBackend = false;
     });
 
-    if (!energySystem.canPlay()) {
-      _showNoEnergyDialog();
+    if (showTutorial) {
+      _showTutorialDialog();
     } else {
-      if (showTutorial) {
-        _showTutorialDialog();
-      } else {
-        _startGame();
-      }
+      _startGame();
     }
   }
 
@@ -178,23 +153,7 @@ class _CatchGameScreenState extends State<CatchGameScreen>
     _apiService.updateGameScore(coins, xp);
   }
 
-  void _saveEnergySystem() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = energySystem.toJson();
-    await prefs.setString(
-      'energy_system',
-      Uri(
-        queryParameters: {
-          'currentEnergy': json['currentEnergy'].toString(),
-          'lastEnergyUpdate': json['lastEnergyUpdate'] ?? '',
-        },
-      ).query,
-    );
-  }
-
   void _startGame() {
-    energySystem.useEnergy();
-    _saveEnergySystem();
     _ticker = createTicker(_onTick)..start();
     _startSpawning();
   }
@@ -580,118 +539,44 @@ class _CatchGameScreenState extends State<CatchGameScreen>
     );
   }
 
-  void _showNoEnergyDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('⚡ No Energy'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('You need energy to play!'),
-            const SizedBox(height: 12),
-            Text(
-              'Energy: ${energySystem.currentEnergy}/${EnergySystem.maxEnergy}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            if (energySystem.getTimeUntilNextEnergy() != null)
-              Text(
-                'Next in: ${_formatDuration(energySystem.getTimeUntilNextEnergy()!)}',
-                style: const TextStyle(fontSize: 12),
-              ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showGameOverDialog(GameSession session) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('🎮 Game Over!', style: TextStyle(fontSize: 20)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _statRow('Score', session.finalScore.toString()),
-              _statRow('Coins', '🪙 ${session.coinsEarned}'),
-              _statRow('XP', '⭐ ${session.xpEarned}'),
-              _statRow('Caught', session.itemsCaught.toString()),
-              _statRow('Max Combo', '${session.maxCombo}x'),
-              _statRow('Time', _formatDuration(session.playTime)),
-              const Divider(),
-              Text(
-                'Energy: ${energySystem.currentEnergy}/${EnergySystem.maxEnergy}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Text(
+              'Score: ${session.finalScore}',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text('Coins: +${session.coinsEarned}'),
+            Text('XP: +${session.xpEarned}'),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Go back to menu
             },
-            child: const Text('Exit'),
+            child: const Text('Back to Menu'),
           ),
-          if (energySystem.canPlay())
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CatchGameScreen(),
-                  ),
-                );
-              },
-              child: const Text('Play Again'),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12)),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Close game screen
+              // Note: GameScreen will handle restarting if needed
+            },
+            child: const Text('Play Again'),
           ),
         ],
       ),
     );
-  }
-
-  String _formatDuration(Duration d) {
-    final hours = d.inHours;
-    final minutes = d.inMinutes % 60;
-    final seconds = d.inSeconds % 60;
-    if (hours > 0) return '${hours}h ${minutes}m';
-    if (minutes > 0) return '${minutes}m ${seconds}s';
-    return '${seconds}s';
   }
 
   @override
