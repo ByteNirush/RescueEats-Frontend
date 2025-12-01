@@ -15,7 +15,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   late EnergySystem energySystem;
   int coins = 0;
   int xp = 0;
@@ -27,17 +27,45 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _dailyLoginService = DailyLoginService(ApiService());
     _loadData();
     // Update energy every minute
+    _startEnergyTimer();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Stop energy updates when app is paused/inactive, resume when active
+    if (state == AppLifecycleState.resumed) {
+      _startEnergyTimer();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _stopEnergyTimer();
+    }
+  }
+
+  void _startEnergyTimer() {
+    // Cancel existing timer to prevent multiple timers
+    energyTimer?.cancel();
+
     energyTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      _updateEnergy();
+      if (mounted) {
+        _updateEnergy();
+      }
     });
+  }
+
+  void _stopEnergyTimer() {
+    energyTimer?.cancel();
+    energyTimer = null;
   }
 
   @override
   void dispose() {
-    energyTimer?.cancel();
+    _stopEnergyTimer();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 

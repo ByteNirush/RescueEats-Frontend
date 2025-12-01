@@ -487,6 +487,22 @@ class ApiService {
     }
   }
 
+  Future<void> rateOrder(String orderId, int rating, String review) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/orders/$orderId/rate'),
+            headers: headers,
+            body: jsonEncode({'rating': rating, 'review': review}),
+          )
+          .timeout(const Duration(seconds: 60));
+      _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
   Future<void> updateOrderStatus(String id, String status) async {
     try {
       final headers = await _getHeaders();

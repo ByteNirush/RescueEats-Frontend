@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rescueeats/core/appTheme/appColors.dart';
 import 'package:rescueeats/core/model/orderModel.dart';
 import 'package:rescueeats/core/utils/responsive_utils.dart';
 import 'package:rescueeats/screens/order/orderLogic.dart';
+import 'package:rescueeats/screens/order/widgets/ratingDialog.dart';
 import 'package:rescueeats/screens/user/customerHomeTab.dart';
 import 'package:rescueeats/screens/user/profileScreen.dart';
 import 'package:rescueeats/screens/user/cancellationScreen.dart';
@@ -91,11 +93,62 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 }
 
 // --- TAB 2: ORDERS SCREEN ---
-class CustomerOrdersTab extends ConsumerWidget {
+class CustomerOrdersTab extends ConsumerStatefulWidget {
   const CustomerOrdersTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CustomerOrdersTab> createState() => _CustomerOrdersTabState();
+}
+
+class _CustomerOrdersTabState extends ConsumerState<CustomerOrdersTab>
+    with WidgetsBindingObserver {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Start auto-refresh for real-time order tracking
+    _startAutoRefresh();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Stop refresh when app is paused/inactive, resume when active
+    if (state == AppLifecycleState.resumed) {
+      _startAutoRefresh();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _stopAutoRefresh();
+    }
+  }
+
+  void _startAutoRefresh() {
+    // Cancel existing timer to prevent multiple timers
+    _refreshTimer?.cancel();
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted) {
+        ref.read(orderControllerProvider.notifier).fetchOrders();
+      }
+    });
+  }
+
+  void _stopAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopAutoRefresh();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final asyncOrders = ref.watch(orderControllerProvider);
 
     return Scaffold(
@@ -251,6 +304,86 @@ class CustomerOrdersTab extends ConsumerWidget {
 
             // Status Badge
             _buildEnhancedStatus(order.status),
+
+            // Rating prompt for delivered orders
+            if (order.status == 'delivered' && order.rating == null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.star_outline,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'How was your order?',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => RatingDialog(
+                            orderId: order.id,
+                            restaurantName: order.restaurantName,
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Rate Now',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Show rating if already rated
+            if (order.rating != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    ...List.generate(5, (index) {
+                      return Icon(
+                        index < order.rating! ? Icons.star : Icons.star_border,
+                        color: Colors.amber,
+                        size: 18,
+                      );
+                    }),
+                    const SizedBox(width: 8),
+                    Text(
+                      'You rated ${order.rating}/5',
+                      style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 12),
 
             // Items

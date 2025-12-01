@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -19,8 +20,53 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<OrderDetailScreen> createState() => _OrderDetailScreenState();
 }
 
-class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
+class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen>
+    with WidgetsBindingObserver {
   bool _isCancelling = false;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Auto-refresh order status every 10 seconds
+    _startAutoRefresh();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Stop refresh when app is paused/inactive, resume when active
+    if (state == AppLifecycleState.resumed) {
+      _startAutoRefresh();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _stopAutoRefresh();
+    }
+  }
+
+  void _startAutoRefresh() {
+    // Cancel existing timer to prevent multiple timers
+    _refreshTimer?.cancel();
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted) {
+        ref.read(orderControllerProvider.notifier).fetchOrders();
+      }
+    });
+  }
+
+  void _stopAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopAutoRefresh();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -57,6 +57,8 @@ class OrderItem extends Equatable {
 
 class OrderModel extends Equatable {
   final String id;
+  final String customerId;
+  final String customerName;
   final String restaurantId;
   final String restaurantName;
   final String restaurantImage;
@@ -82,8 +84,15 @@ class OrderModel extends Equatable {
   final int coinsUsed;
   final double coinDiscount;
 
+  // Rating & Review
+  final int? rating;
+  final String review;
+  final DateTime? ratedAt;
+
   const OrderModel({
     required this.id,
+    this.customerId = '',
+    this.customerName = '',
     required this.restaurantId,
     this.restaurantName = '',
     this.restaurantImage = '',
@@ -104,12 +113,27 @@ class OrderModel extends Equatable {
     this.cancelReason = '',
     this.coinsUsed = 0,
     this.coinDiscount = 0.0,
+    this.rating,
+    this.review = '',
+    this.ratedAt,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
+    String cId = '';
+    String cName = '';
     String rId = '';
     String rName = '';
     String rImage = '';
+
+    // Parse customer information
+    if (json['customer'] is Map) {
+      cId = json['customer']['_id'] ?? '';
+      cName = json['customer']['username'] ?? json['customer']['name'] ?? '';
+    } else if (json['customer'] is String) {
+      cId = json['customer'];
+    } else if (json['customerId'] != null) {
+      cId = json['customerId'];
+    }
 
     if (json['restaurant'] is Map) {
       rId = json['restaurant']['_id'] ?? '';
@@ -123,6 +147,8 @@ class OrderModel extends Equatable {
 
     return OrderModel(
       id: json['_id'] ?? json['id'] ?? '',
+      customerId: cId,
+      customerName: cName,
       restaurantId: rId,
       restaurantName: rName,
       restaurantImage: rImage,
@@ -153,12 +179,16 @@ class OrderModel extends Equatable {
       cancelReason: json['cancelReason'] ?? '',
       coinsUsed: json['coinsUsed'] ?? 0,
       coinDiscount: (json['coinDiscount'] as num?)?.toDouble() ?? 0.0,
+      rating: json['rating'],
+      review: json['review'] ?? '',
+      ratedAt: json['ratedAt'] != null ? DateTime.parse(json['ratedAt']) : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
+      'customer': customerId,
       'restaurant': restaurantId,
       'items': items.map((e) => e.toJson()).toList(),
       'totalAmount': totalAmount,
@@ -177,12 +207,17 @@ class OrderModel extends Equatable {
       'cancelReason': cancelReason,
       'coinsUsed': coinsUsed,
       'coinDiscount': coinDiscount,
+      'rating': rating,
+      'review': review,
+      'ratedAt': ratedAt?.toIso8601String(),
     };
   }
 
   @override
   List<Object?> get props => [
     id,
+    customerId,
+    customerName,
     restaurantId,
     restaurantName,
     restaurantImage,
@@ -203,5 +238,8 @@ class OrderModel extends Equatable {
     cancelReason,
     coinsUsed,
     coinDiscount,
+    rating,
+    review,
+    ratedAt,
   ];
 }

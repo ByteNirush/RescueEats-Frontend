@@ -11,6 +11,7 @@ abstract class IOrderRepository {
   Future<void> updateOrderStatus(String orderId, String status);
   Future<OrderModel> placeOrder(OrderModel order);
   Future<void> cancelOrder(String orderId);
+  Future<void> rateOrder(String orderId, int rating, String review);
 }
 
 // 2. Implement the Real Repository
@@ -45,6 +46,11 @@ class OrderRepository implements IOrderRepository {
   @override
   Future<void> cancelOrder(String orderId) async {
     await _apiService.cancelOrder(orderId);
+  }
+
+  @override
+  Future<void> rateOrder(String orderId, int rating, String review) async {
+    await _apiService.rateOrder(orderId, rating, review);
   }
 }
 

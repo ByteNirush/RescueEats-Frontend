@@ -45,7 +45,7 @@ class CatchGameScreen extends StatefulWidget {
 }
 
 class _CatchGameScreenState extends State<CatchGameScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   Ticker? _ticker;
   final Player player = Player();
   final List<Food> foods = [];
@@ -93,8 +93,24 @@ class _CatchGameScreenState extends State<CatchGameScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadLocal();
     gameStartTime = DateTime.now();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Auto-pause game when app goes to background
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (!isPaused && !isGameOver && mounted) {
+        setState(() {
+          isPaused = true;
+        });
+      }
+    }
+    // Game remains paused when resumed - user must manually unpause
   }
 
   @override
@@ -104,6 +120,7 @@ class _CatchGameScreenState extends State<CatchGameScreen>
     for (var timer in powerUpTimers.values) {
       timer?.cancel();
     }
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 

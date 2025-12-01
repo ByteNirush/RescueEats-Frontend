@@ -27,23 +27,38 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
   Future<void> updateStatus(String orderId, String newStatus) async {
     final previousState = state; // Save copy for rollback
 
-    // Optimistically update UI
+    // Optimistically update UI - preserve ALL fields
     state = state.whenData((orders) {
       return [
         for (final order in orders)
           if (order.id == orderId)
             OrderModel(
               id: order.id,
+              customerId: order.customerId,
+              customerName: order.customerName,
               restaurantId: order.restaurantId,
               restaurantName: order.restaurantName,
               restaurantImage: order.restaurantImage,
               deliveryAddress: order.deliveryAddress,
               contactPhone: order.contactPhone,
               totalAmount: order.totalAmount,
+              deliveryCharge: order.deliveryCharge,
               items: order.items,
               status: newStatus, // New Status
               createdAt: order.createdAt,
               paymentMethod: order.paymentMethod,
+              orderType: order.orderType,
+              isCanceled: order.isCanceled,
+              originalPrice: order.originalPrice,
+              discountPercent: order.discountPercent,
+              discountedPrice: order.discountedPrice,
+              canceledAt: order.canceledAt,
+              cancelReason: order.cancelReason,
+              coinsUsed: order.coinsUsed,
+              coinDiscount: order.coinDiscount,
+              rating: order.rating,
+              review: order.review,
+              ratedAt: order.ratedAt,
             )
           else
             order,
@@ -53,10 +68,12 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
     try {
       // Call Backend
       await _repository.updateOrderStatus(orderId, newStatus);
+      // Refresh from server to get the actual state
+      await fetchOrders();
     } catch (e) {
       // If backend fails, rollback UI and show error
       state = previousState;
-      // In a real app, you might expose a separate error stream for snackbars
+      rethrow; // Rethrow so UI can show error message
     }
   }
 
@@ -102,6 +119,17 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
       await _repository.cancelOrder(orderId);
     } catch (e) {
       state = previousState;
+      rethrow;
+    }
+  }
+
+  // 5. Rate Order
+  Future<void> rateOrder(String orderId, int rating, String review) async {
+    try {
+      await _repository.rateOrder(orderId, rating, review);
+      // Refresh to get updated order with rating
+      await fetchOrders();
+    } catch (e) {
       rethrow;
     }
   }
