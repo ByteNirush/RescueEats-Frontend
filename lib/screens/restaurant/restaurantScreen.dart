@@ -9,6 +9,7 @@ import 'package:rescueeats/features/routes/routeconstants.dart';
 import 'package:rescueeats/screens/auth/provider/authprovider.dart';
 import 'package:rescueeats/screens/order/orderLogic.dart';
 import 'package:rescueeats/screens/restaurant/menuScreen.dart';
+import 'package:rescueeats/screens/restaurant/marketplaceDashboardScreen.dart';
 import 'package:rescueeats/screens/restaurant/provider/restaurant_provider.dart';
 
 class RestaurantDashboard extends ConsumerStatefulWidget {
@@ -284,6 +285,19 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
               ),
             );
           }),
+          _buildDrawerItem(
+            Icons.local_offer,
+            "Canceled Orders Marketplace",
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (c) => const RestaurantMarketplaceDashboardScreen(),
+                ),
+              );
+            },
+          ),
           _buildDrawerItem(
             Icons.bar_chart,
             "Sales Report",

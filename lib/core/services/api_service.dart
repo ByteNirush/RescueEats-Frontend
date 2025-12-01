@@ -955,4 +955,171 @@ class ApiService {
       throw AppException(e.toString());
     }
   }
+
+  // --- CANCELED ORDERS MARKETPLACE API ---
+
+  /// CREATE - Add canceled order to marketplace (Restaurant only)
+  Future<Map<String, dynamic>> createMarketplaceItem({
+    required String orderId,
+    required double discountPercent,
+    String? cancelReason,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/marketplace'),
+            headers: headers,
+            body: jsonEncode({
+              'orderId': orderId,
+              'discountPercent': discountPercent,
+              'cancelReason': cancelReason ?? '',
+            }),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// READ - Get marketplace items (Browse marketplace - Public)
+  Future<Map<String, dynamic>> getMarketplaceItems({
+    String? cuisine,
+    double? minPrice,
+    double? maxPrice,
+    String? restaurantId,
+    String availability = 'available',
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'availability': availability,
+      };
+
+      if (cuisine != null && cuisine.isNotEmpty) {
+        queryParams['cuisine'] = cuisine;
+      }
+      if (minPrice != null) {
+        queryParams['minPrice'] = minPrice.toString();
+      }
+      if (maxPrice != null) {
+        queryParams['maxPrice'] = maxPrice.toString();
+      }
+      if (restaurantId != null && restaurantId.isNotEmpty) {
+        queryParams['restaurantId'] = restaurantId;
+      }
+
+      final uri = Uri.parse(
+        '$baseUrl/marketplace',
+      ).replace(queryParameters: queryParams);
+
+      final headers = await _getHeaders();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// READ - Get single marketplace item by ID
+  Future<Map<String, dynamic>> getMarketplaceItemById(String itemId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(Uri.parse('$baseUrl/marketplace/$itemId'), headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// READ - Get restaurant's own marketplace items
+  Future<Map<String, dynamic>> getMyMarketplaceItems({
+    String? availability,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (availability != null && availability.isNotEmpty) {
+        queryParams['availability'] = availability;
+      }
+
+      final uri = Uri.parse(
+        '$baseUrl/marketplace/my-items/list',
+      ).replace(queryParameters: queryParams);
+
+      final headers = await _getHeaders();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// UPDATE - Update marketplace item (Restaurant only)
+  Future<Map<String, dynamic>> updateMarketplaceItem({
+    required String itemId,
+    double? discountPercent,
+    String? availability,
+    DateTime? expiresAt,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final body = <String, dynamic>{};
+
+      if (discountPercent != null) {
+        body['discountPercent'] = discountPercent;
+      }
+      if (availability != null) {
+        body['availability'] = availability;
+      }
+      if (expiresAt != null) {
+        body['expiresAt'] = expiresAt.toIso8601String();
+      }
+
+      final response = await http
+          .patch(
+            Uri.parse('$baseUrl/marketplace/$itemId'),
+            headers: headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// DELETE - Remove marketplace item (Restaurant only)
+  Future<Map<String, dynamic>> deleteMarketplaceItem(String itemId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .delete(Uri.parse('$baseUrl/marketplace/$itemId'), headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
 }
