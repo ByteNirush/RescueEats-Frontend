@@ -6,6 +6,7 @@ import 'package:rescueeats/core/model/orderModel.dart';
 import 'package:rescueeats/features/providers/cart_provider.dart';
 import 'package:rescueeats/screens/auth/provider/authprovider.dart';
 import 'package:rescueeats/screens/order/orderLogic.dart';
+import 'package:rescueeats/core/services/restaurantApiService.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -19,6 +20,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   String _paymentMethod = 'cod'; // Default
+  final RestaurantApiService _restaurantApiService = RestaurantApiService();
+  String? _restaurantAddress;
 
   @override
   void initState() {
@@ -27,6 +30,42 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final user = ref.read(currentUserProvider);
     if (user?.phoneNumber != null) {
       _phoneController.text = user!.phoneNumber!;
+    }
+    // Fetch restaurant address if needed
+    _loadRestaurantAddress();
+  }
+
+  Future<void> _loadRestaurantAddress() async {
+    final cart = ref.read(cartProvider);
+    if (cart.restaurantId != null && cart.restaurantId!.isNotEmpty) {
+      try {
+        final restaurant = await _restaurantApiService.getRestaurantDetails(
+          cart.restaurantId!,
+        );
+        if (mounted) {
+          setState(() {
+            _restaurantAddress = restaurant.address;
+            // If pickup is already selected, set the address
+            if (cart.orderType == 'pickup' && _addressController.text.isEmpty) {
+              _addressController.text = restaurant.address;
+            }
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading restaurant address: $e');
+      }
+    }
+  }
+
+  void _onOrderTypeChanged(String orderType) {
+    ref.read(cartProvider.notifier).setOrderType(orderType);
+
+    // If pickup is selected, set restaurant address
+    if (orderType == 'pickup' && _restaurantAddress != null) {
+      _addressController.text = _restaurantAddress!;
+    } else if (orderType == 'delivery') {
+      // Clear address when switching back to delivery
+      _addressController.text = '';
     }
   }
 
@@ -263,9 +302,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Delivery Address Input
-                          const Text(
-                            "Delivery Address",
-                            style: TextStyle(
+                          Text(
+                            cart.orderType == 'pickup'
+                                ? "Pickup Location (Restaurant Address)"
+                                : "Delivery Address",
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
@@ -273,20 +314,34 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           const SizedBox(height: 8),
                           TextField(
                             controller: _addressController,
+                            readOnly: cart.orderType == 'pickup',
                             decoration: InputDecoration(
-                              hintText: "Enter delivery address",
+                              hintText: cart.orderType == 'pickup'
+                                  ? "Restaurant address (auto-filled)"
+                                  : "Enter delivery address",
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: cart.orderType == 'pickup'
+                                  ? Colors.grey.shade100
+                                  : Colors.white,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
                                   color: Colors.grey.shade300,
                                 ),
                               ),
-                              prefixIcon: const Icon(
+                              prefixIcon: Icon(
                                 Icons.location_on,
-                                color: AppColors.primary,
+                                color: cart.orderType == 'pickup'
+                                    ? Colors.grey
+                                    : AppColors.primary,
                               ),
+                              suffixIcon: cart.orderType == 'pickup'
+                                  ? const Icon(
+                                      Icons.lock_outline,
+                                      color: Colors.grey,
+                                      size: 18,
+                                    )
+                                  : null,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -318,6 +373,106 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 color: AppColors.primary,
                               ),
                             ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Order Type Selection (Delivery or Pickup)
+                          const Text(
+                            "Order Type",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _onOrderTypeChanged('delivery'),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: cart.orderType == 'delivery'
+                                          ? AppColors.primary
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: cart.orderType == 'delivery'
+                                            ? AppColors.primary
+                                            : Colors.grey.shade300,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.delivery_dining,
+                                          color: cart.orderType == 'delivery'
+                                              ? Colors.white
+                                              : AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "Delivery",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: cart.orderType == 'delivery'
+                                                ? Colors.white
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _onOrderTypeChanged('pickup'),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: cart.orderType == 'pickup'
+                                          ? Colors.green
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: cart.orderType == 'pickup'
+                                            ? Colors.green
+                                            : Colors.grey.shade300,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.shopping_bag,
+                                          color: cart.orderType == 'pickup'
+                                              ? Colors.white
+                                              : Colors.green,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "Pickup",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: cart.orderType == 'pickup'
+                                                ? Colors.white
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
 
@@ -468,6 +623,55 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          "Delivery Charge",
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                        if (cart.orderType == 'pickup') ...[
+                                          const SizedBox(width: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade100,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              "FREE",
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green.shade700,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    Text(
+                                      _getDeliveryCharge() == 0
+                                          ? "Rs. 0"
+                                          : "Rs. ${_getDeliveryCharge()}",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: _getDeliveryCharge() == 0
+                                            ? Colors.green
+                                            : Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 if (_useCoins) ...[
                                   const SizedBox(height: 8),
                                   Row(
@@ -567,6 +771,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   bool _useCoins = false;
+  static const double _deliveryCharge = 50.0; // Rs. 50 delivery charge
 
   double _calculateCoinDiscount(double total) {
     // Logic: Max 30% of total
@@ -580,11 +785,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     return double.parse(maxDiscount.toStringAsFixed(2));
   }
 
+  double _getDeliveryCharge() {
+    final cart = ref.read(cartProvider);
+    return cart.orderType == 'pickup' ? 0.0 : _deliveryCharge;
+  }
+
   double _calculateTotal(double subtotal) {
+    final deliveryFee = _getDeliveryCharge();
+    double total = subtotal + deliveryFee;
+
     if (_useCoins) {
-      return subtotal - _calculateCoinDiscount(subtotal);
+      total = total - _calculateCoinDiscount(subtotal);
     }
-    return subtotal;
+    return total;
   }
 
   Future<void> _placeOrder() async {
@@ -593,7 +806,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     if (_addressController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a delivery address")),
+        SnackBar(
+          content: Text(
+            cart.orderType == 'pickup'
+                ? "Restaurant address not available. Please try again."
+                : "Please enter a delivery address",
+          ),
+        ),
       );
       return;
     }
@@ -625,6 +844,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         deliveryAddress: _addressController.text.trim(),
         contactPhone: _phoneController.text.trim(),
         paymentMethod: _paymentMethod,
+        orderType: cart.orderType, // Add order type (delivery or pickup)
         coinsUsed: _useCoins
             ? (_calculateCoinDiscount(cart.totalAmount) * 10).toInt()
             : 0, // 10 coins = 1 Rs

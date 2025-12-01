@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:rescueeats/core/error/app_exception.dart';
 import 'package:rescueeats/core/model/userModel.dart';
 import 'package:rescueeats/core/model/restaurantModel.dart';
@@ -11,15 +10,9 @@ import 'package:rescueeats/core/model/addressModel.dart';
 
 class ApiService {
   // Production URL (Render)
-  // Production URL (Render)
-  static String get baseUrl {
-    if (kIsWeb) {
-      // Use CORS proxy for web to avoid CORS issues
-      return 'https://corsproxy.io/?https://rescueeats.onrender.com/api';
-    }
-    return 'https://rescueeats.onrender.com/api';
-  }
+  static const String baseUrl = 'https://rescueeats.onrender.com/api';
 
+  // For local development, uncomment the line below and comment the line above
   // static const String baseUrl = 'http://localhost:5001/api';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
@@ -447,6 +440,7 @@ class ApiService {
         'deliveryAddress': order.deliveryAddress,
         'contactPhone': order.contactPhone,
         'paymentMethod': order.paymentMethod,
+        'orderType': order.orderType, // Added orderType
         'coinsUsed': order.coinsUsed, // Added coinsUsed
       };
 

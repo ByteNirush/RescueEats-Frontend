@@ -145,6 +145,43 @@ class RestaurantDetailScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
+                      // Delivery and Pickup Options
+                      Row(
+                        children: [
+                          if (restaurant.supportsDelivery) ...[
+                            const Icon(
+                              Icons.delivery_dining,
+                              size: 20,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              "Delivery",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                          ],
+                          if (restaurant.supportsPickup) ...[
+                            const Icon(
+                              Icons.shopping_bag,
+                              size: 20,
+                              color: Colors.green,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              "Pickup",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       if (restaurant.description.isNotEmpty) ...[
                         Text(
                           restaurant.description,

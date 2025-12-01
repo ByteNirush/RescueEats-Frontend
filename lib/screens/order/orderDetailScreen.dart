@@ -209,7 +209,13 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               "- Rs. ${(order.originalPrice! - order.discountedPrice!).toStringAsFixed(2)}",
               color: Colors.green,
             ),
-          _buildBillRow("Delivery Fee", "Rs. 0"),
+          _buildBillRow(
+            "Delivery Fee",
+            order.deliveryCharge == 0
+                ? "FREE"
+                : "Rs. ${order.deliveryCharge.toStringAsFixed(0)}",
+            color: order.deliveryCharge == 0 ? Colors.green : null,
+          ),
           const Divider(height: 24),
           _buildBillRow(
             "Total",
@@ -219,10 +225,52 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Delivery Details
-          const Text(
-            "Delivery Details",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          // Order Type
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: order.orderType == 'pickup'
+                  ? Colors.green.shade50
+                  : AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: order.orderType == 'pickup'
+                    ? Colors.green.shade300
+                    : AppColors.primary.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  order.orderType == 'pickup'
+                      ? Icons.shopping_bag
+                      : Icons.delivery_dining,
+                  color: order.orderType == 'pickup'
+                      ? Colors.green
+                      : AppColors.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  order.orderType == 'pickup'
+                      ? "Pickup Order"
+                      : "Delivery Order",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: order.orderType == 'pickup'
+                        ? Colors.green
+                        : AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Delivery/Pickup Details
+          Text(
+            order.orderType == 'pickup' ? "Pickup Details" : "Delivery Details",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Row(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:rescueeats/core/appTheme/appColors.dart';
 import 'package:rescueeats/core/model/menuItemModel.dart';
 import 'package:rescueeats/screens/restaurant/provider/menuProvider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class EditMenuItemScreen extends ConsumerStatefulWidget {
   final String restaurantId;
@@ -43,6 +45,11 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
     );
     _isAvailable = widget.menuItem?.isAvailable ?? true;
     _isVeg = widget.menuItem?.isVeg ?? false;
+
+    // Add listener to rebuild when image URL changes
+    _imageController.addListener(() {
+      setState(() {}); // Trigger rebuild to show image preview
+    });
   }
 
   @override
@@ -158,7 +165,7 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
                 validator: (v) => v!.isEmpty ? "Required" : null,
               ),
               const SizedBox(height: 16),
-              if (_imageController.text.isNotEmpty)
+              if (_imageController.text.trim().isNotEmpty)
                 Container(
                   height: 200,
                   width: double.infinity,
@@ -168,13 +175,38 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      _imageController.text,
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => const Center(
-                        child: Icon(Icons.image, size: 50, color: Colors.grey),
-                      ),
-                    ),
+                    child: kIsWeb
+                        ? _buildWebImagePreview()
+                        : CachedNetworkImage(
+                            imageUrl: _imageController.text.trim(),
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey[100],
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.broken_image,
+                                    size: 50,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Failed to load image',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               const SizedBox(height: 24),
@@ -217,6 +249,44 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWebImagePreview() {
+    // For web, show a helpful message instead of trying to load the image
+    // This avoids CORS issues with external image sources
+    return Container(
+      color: Colors.grey[100],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.image, size: 60, color: Colors.grey[400]),
+          const SizedBox(height: 12),
+          Text(
+            'Image Preview',
+            style: TextStyle(
+              color: Colors.grey[700],
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Preview not available on web due to CORS',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[500], fontSize: 11),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Image will display correctly in mobile app',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[400], fontSize: 10),
+          ),
+        ],
       ),
     );
   }

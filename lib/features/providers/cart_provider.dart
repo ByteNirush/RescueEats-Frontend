@@ -14,8 +14,14 @@ class CartState {
   final String? restaurantId;
   final String? restaurantName;
   final List<CartItem> items;
+  final String orderType; // 'delivery' or 'pickup'
 
-  CartState({this.restaurantId, this.restaurantName, this.items = const []});
+  CartState({
+    this.restaurantId,
+    this.restaurantName,
+    this.items = const [],
+    this.orderType = 'delivery',
+  });
 
   double get totalAmount => items.fold(0, (sum, item) => sum + item.totalPrice);
   int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
@@ -24,11 +30,13 @@ class CartState {
     String? restaurantId,
     String? restaurantName,
     List<CartItem>? items,
+    String? orderType,
   }) {
     return CartState(
       restaurantId: restaurantId ?? this.restaurantId,
       restaurantName: restaurantName ?? this.restaurantName,
       items: items ?? this.items,
+      orderType: orderType ?? this.orderType,
     );
   }
 }
@@ -104,6 +112,10 @@ class CartNotifier extends StateNotifier<CartState> {
 
   void clearCart() {
     state = CartState();
+  }
+
+  void setOrderType(String orderType) {
+    state = state.copyWith(orderType: orderType);
   }
 }
 

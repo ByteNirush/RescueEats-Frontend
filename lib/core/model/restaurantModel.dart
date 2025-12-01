@@ -66,6 +66,10 @@ class RestaurantModel extends Equatable {
   final OpeningHoursModel openingHours;
   final List<MenuItemModel> menu;
 
+  // Delivery and Pickup Support
+  final bool supportsDelivery;
+  final bool supportsPickup;
+
   // Owner relationship fields
   final String? ownerId;
   final String? ownerName;
@@ -87,6 +91,8 @@ class RestaurantModel extends Equatable {
     required this.isOpen,
     required this.openingHours,
     this.menu = const [],
+    this.supportsDelivery = true,
+    this.supportsPickup = true,
     this.ownerId,
     this.ownerName,
     this.ownerEmail,
@@ -137,6 +143,8 @@ class RestaurantModel extends Equatable {
               ?.map((e) => MenuItemModel.fromJson(e))
               .toList() ??
           [],
+      supportsDelivery: json['supportsDelivery'] ?? true,
+      supportsPickup: json['supportsPickup'] ?? true,
       ownerId: ownerId,
       ownerName: ownerName,
       ownerEmail: ownerEmail,
@@ -160,6 +168,8 @@ class RestaurantModel extends Equatable {
       'isOpen': isOpen,
       'openingHours': openingHours.toJson(),
       'menu': menu.map((e) => e.toJson()).toList(),
+      'supportsDelivery': supportsDelivery,
+      'supportsPickup': supportsPickup,
       if (ownerId != null) 'owner': ownerId,
     };
   }
@@ -186,6 +196,8 @@ class RestaurantModel extends Equatable {
     isOpen,
     openingHours,
     menu,
+    supportsDelivery,
+    supportsPickup,
     ownerId,
     ownerName,
     ownerEmail,

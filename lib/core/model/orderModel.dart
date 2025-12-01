@@ -62,10 +62,12 @@ class OrderModel extends Equatable {
   final String restaurantImage;
   final List<OrderItem> items;
   final double totalAmount;
+  final double deliveryCharge;
   final String status;
   final String deliveryAddress;
   final String? contactPhone;
   final String paymentMethod;
+  final String orderType; // 'delivery' or 'pickup'
   final DateTime createdAt;
 
   // Canceled Order Fields
@@ -87,10 +89,12 @@ class OrderModel extends Equatable {
     this.restaurantImage = '',
     required this.items,
     required this.totalAmount,
+    this.deliveryCharge = 0.0,
     required this.status,
     required this.deliveryAddress,
     this.contactPhone,
     required this.paymentMethod,
+    this.orderType = 'delivery',
     required this.createdAt,
     this.isCanceled = false,
     this.originalPrice,
@@ -128,10 +132,12 @@ class OrderModel extends Equatable {
               .toList() ??
           [],
       totalAmount: (json['totalAmount'] ?? json['total'] ?? 0).toDouble(),
+      deliveryCharge: (json['deliveryCharge'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] ?? 'pending',
       deliveryAddress: json['deliveryAddress'] ?? '',
       contactPhone: json['contactPhone'],
       paymentMethod: json['paymentMethod'] ?? 'cod',
+      orderType: json['orderType'] ?? 'delivery',
       createdAt: DateTime.parse(
         json['createdAt'] ?? DateTime.now().toIso8601String(),
       ),
@@ -154,10 +160,12 @@ class OrderModel extends Equatable {
       'restaurant': restaurantId,
       'items': items.map((e) => e.toJson()).toList(),
       'totalAmount': totalAmount,
+      'deliveryCharge': deliveryCharge,
       'status': status,
       'deliveryAddress': deliveryAddress,
       'contactPhone': contactPhone,
       'paymentMethod': paymentMethod,
+      'orderType': orderType,
       'createdAt': createdAt.toIso8601String(),
       'isCanceled': isCanceled,
       'originalPrice': originalPrice,
@@ -178,10 +186,12 @@ class OrderModel extends Equatable {
     restaurantImage,
     items,
     totalAmount,
+    deliveryCharge,
     status,
     deliveryAddress,
     contactPhone,
     paymentMethod,
+    orderType,
     createdAt,
     isCanceled,
     originalPrice,
