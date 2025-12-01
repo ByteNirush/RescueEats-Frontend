@@ -6,6 +6,7 @@ import 'package:rescueeats/core/model/userModel.dart';
 import 'package:rescueeats/screens/auth/provider/authstate.dart';
 import 'package:rescueeats/core/services/api_service.dart';
 import 'package:rescueeats/screens/restaurant/provider/restaurant_provider.dart';
+import 'package:rescueeats/screens/order/orderLogic.dart';
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final ApiService _apiService;
@@ -31,6 +32,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final user = await _apiService.login(emailOrPhone, password);
+      
+      // Invalidate order provider to ensure fresh data for new user
+      _ref.invalidate(orderControllerProvider);
+      
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
 
       // Register FCM Token
@@ -83,6 +88,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         password: password,
         role: role,
       );
+
+      // Invalidate order provider to ensure fresh data for new user
+      _ref.invalidate(orderControllerProvider);
 
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
 
@@ -152,6 +160,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Clear restaurant data on logout
       _ref.read(restaurantOwnerProvider.notifier).clear();
+      
+      // Invalidate all providers to clear cached data
+      _ref.invalidate(orderControllerProvider);
 
       await Future.delayed(const Duration(seconds: 1));
       state = const AuthState(status: AuthStatus.unauthenticated);
