@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+pubspec.lock
+*.lock
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +45,34 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android specific
+android/local.properties
+android/gradle/wrapper/gradle-wrapper.jar
+android/app/google-services.json
+android/.gradle/
+
+# iOS specific
+ios/Podfile.lock
+ios/.symlinks/
+ios/Pods/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Backup files
+*.bak
+*.swp
+*.swo
+*~
+
+# Analysis output files
+analysis_output.txt
+analysis_final.txt
+
+# Firebase and sensitive files
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Local configuration
+.env
+.env.local
