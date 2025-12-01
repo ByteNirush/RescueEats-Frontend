@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:rescueeats/core/error/app_exception.dart';
 import 'package:rescueeats/core/model/userModel.dart';
 import 'package:rescueeats/core/model/restaurantModel.dart';
@@ -11,7 +12,14 @@ import 'package:rescueeats/core/model/addressModel.dart';
 class ApiService {
   // Production URL (Render)
   // Production URL (Render)
-  static const String baseUrl = 'https://rescueeats.onrender.com/api';
+  static String get baseUrl {
+    if (kIsWeb) {
+      // Use CORS proxy for web to avoid CORS issues
+      return 'https://corsproxy.io/?https://rescueeats.onrender.com/api';
+    }
+    return 'https://rescueeats.onrender.com/api';
+  }
+
   // static const String baseUrl = 'http://localhost:5001/api';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
@@ -22,6 +30,7 @@ class ApiService {
     final token = prefs.getString(_accessTokenKey);
     return {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
@@ -78,10 +87,14 @@ class ApiService {
 
   Future<UserModel> login(String email, String password) async {
     try {
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       final response = await http
           .post(
             Uri.parse('$baseUrl/users/login'),
-            headers: {'Content-Type': 'application/json'},
+            headers: headers,
             body: jsonEncode({'emailOrPhone': email, 'password': password}),
           )
           .timeout(
@@ -133,10 +146,14 @@ class ApiService {
     required UserRole role,
   }) async {
     try {
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       final response = await http
           .post(
             Uri.parse('$baseUrl/users/signup'),
-            headers: {'Content-Type': 'application/json'},
+            headers: headers,
             body: jsonEncode({
               'name': name,
               'email': email,
@@ -597,20 +614,81 @@ class ApiService {
     }
   }
 
+  /// Get daily reward status (optional - check if backend supports it)
+  Future<Map<String, dynamic>?> getDailyRewardStatus() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(Uri.parse('$baseUrl/game/daily-reward/status'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 404) {
+        // Endpoint not implemented in backend
+        return null;
+      }
+
+      final data = _processResponse(response);
+      return data;
+    } catch (e) {
+      print('[API] Daily reward status check failed (not critical): $e');
+      return null;
+    }
+  }
+
   /// Claim daily reward
   Future<Map<String, dynamic>> claimDailyReward() async {
     try {
+      print('[API] Claiming daily reward...');
       final headers = await _getHeaders();
+      print('[API] Headers: ${headers.keys.toList()}');
+      print('[API] URL: $baseUrl/game/daily-reward');
+
       final response = await http
           .post(
             Uri.parse('$baseUrl/game/daily-reward'),
             headers: headers,
             body: jsonEncode({}),
           )
-          .timeout(const Duration(seconds: 60));
-      return _processResponse(response);
+          .timeout(const Duration(seconds: 30));
+
+      print('[API] Daily reward response status: ${response.statusCode}');
+      print('[API] Daily reward response body: ${response.body}');
+
+      final result = _processResponse(response);
+      print('[API] Daily reward parsed result: $result');
+
+      return result;
+    } catch (e, stackTrace) {
+      print('[API] Daily reward error: $e');
+      print('[API] Stack trace: $stackTrace');
+      return {
+        'success': false,
+        'message': 'Unable to connect to server: ${e.toString()}',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get daily reward history (last 7 days)
+  Future<List<dynamic>?> getDailyRewardHistory() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/game/daily-reward/history'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 404) {
+        return null;
+      }
+
+      final data = _processResponse(response);
+      return data['history'] as List<dynamic>?;
     } catch (e) {
-      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+      print('[API] Daily reward history fetch failed: $e');
+      return null;
     }
   }
 

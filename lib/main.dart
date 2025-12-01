@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:rescueeats/core/appTheme/apptheme.dart';
 import 'package:rescueeats/features/routes/approute.dart';
 
@@ -8,19 +9,28 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
+  if (!kIsWeb) {
+    await Firebase.initializeApp();
+    debugPrint("Handling a background message: ${message.messageId}");
+  }
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Firebase only for mobile platforms
   try {
-    await Firebase.initializeApp();
-    print("Firebase initialized successfully");
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    if (!kIsWeb) {
+      await Firebase.initializeApp();
+      debugPrint("✅ Firebase initialized successfully");
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
+    } else {
+      debugPrint("ℹ️ Running on web - Firebase skipped");
+    }
   } catch (e) {
-    print("Firebase initialization failed: $e");
+    debugPrint("⚠️ Firebase initialization failed: $e");
   }
 
   runApp(const ProviderScope(child: MyApp()));
@@ -38,6 +48,17 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,
+      builder: (context, child) {
+        // Ensure proper text scaling and prevent oversized text on different devices
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(
+              MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.3),
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

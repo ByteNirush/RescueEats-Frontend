@@ -53,7 +53,6 @@ class CanceledOrdersScreen extends ConsumerStatefulWidget {
 class _CanceledOrdersScreenState extends ConsumerState<CanceledOrdersScreen> {
   final TextEditingController _minPriceController = TextEditingController();
   final TextEditingController _maxPriceController = TextEditingController();
-  String? _selectedCuisine;
 
   @override
   Widget build(BuildContext context) {

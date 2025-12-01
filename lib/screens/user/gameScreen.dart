@@ -3,6 +3,8 @@ import 'package:rescueeats/core/appTheme/appColors.dart';
 import 'package:rescueeats/screens/user/catchGameScreen.dart';
 import 'package:rescueeats/core/model/game/game_session.dart';
 import 'package:rescueeats/core/services/api_service.dart';
+import 'package:rescueeats/core/services/daily_login_service.dart';
+import 'package:rescueeats/features/widgets/daily_login_modal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
@@ -20,10 +22,12 @@ class _GameScreenState extends State<GameScreen> {
   int level = 1;
   Timer? energyTimer;
   bool isLoading = true;
+  late DailyLoginService _dailyLoginService;
 
   @override
   void initState() {
     super.initState();
+    _dailyLoginService = DailyLoginService(ApiService());
     _loadData();
     // Update energy every minute
     energyTimer = Timer.periodic(const Duration(minutes: 1), (_) {
@@ -89,36 +93,21 @@ class _GameScreenState extends State<GameScreen> {
           await prefs.setInt('game_xp', loadedXp);
           await prefs.setInt('game_level', loadedLevel);
 
-          // Auto-claim daily reward
+          // Check and show daily login modal
           try {
-            final dailyRewardResult = await apiService.claimDailyReward();
-            if (dailyRewardResult['success'] == true) {
-              final reward = dailyRewardResult['reward'] ?? 0;
-              if (reward > 0) {
-                // Refresh game data to get updated coins
-                final updatedGameData = await apiService.initGame();
-                if (updatedGameData != null) {
-                  loadedCoins = updatedGameData['coins'] ?? 0;
-                  loadedXp = updatedGameData['xp'] ?? 0;
-                  loadedLevel = updatedGameData['level'] ?? 1;
-
-                  // Update cache
-                  await prefs.setInt('game_coins', loadedCoins);
-                  await prefs.setInt('game_xp', loadedXp);
-                  await prefs.setInt('game_level', loadedLevel);
-                }
-
-                // Show success message
+            final canClaim = await _dailyLoginService.canClaimToday();
+            print('[GameScreen] Can claim today: $canClaim');
+            if (canClaim && mounted) {
+              // Small delay to let UI render first
+              Future.delayed(const Duration(milliseconds: 500), () {
                 if (mounted) {
-                  _showMessage(
-                    'Daily login bonus: +$reward coins! 🎉',
-                    isSuccess: true,
-                  );
+                  _showDailyLoginModal();
                 }
-              }
+              });
             }
           } catch (e) {
-            // Silently fail daily reward - not critical
+            print('[GameScreen] Daily login check error: $e');
+            // Silently fail - not critical
           }
         } else {
           // Fallback to cached data if backend fails
@@ -168,6 +157,50 @@ class _GameScreenState extends State<GameScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
+    }
+  }
+
+  Future<void> _showDailyLoginModal() async {
+    if (!mounted) return;
+
+    try {
+      print('[GameScreen] Loading daily login state...');
+      final loginState = await _dailyLoginService.getLoginState();
+
+      if (!mounted) return;
+
+      // Double-check if user can actually claim
+      if (!loginState.canClaimToday) {
+        print('[GameScreen] Cannot claim today, skipping modal');
+        return;
+      }
+
+      print('[GameScreen] Showing daily login modal');
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => DailyLoginModal(
+          loginState: loginState,
+          loginService: _dailyLoginService,
+          onRewardClaimed: () {
+            print('[GameScreen] Reward claimed, reloading data...');
+            // Reload data to update coins and XP
+            _loadData();
+          },
+        ),
+      );
+      print('[GameScreen] Daily login modal closed');
+
+      // Reload data after modal closes to ensure coins are updated
+      if (mounted) {
+        print('[GameScreen] Reloading game data after modal close...');
+        await _loadData();
+      }
+    } catch (e) {
+      print('[GameScreen] Error showing daily login modal: $e');
+      if (mounted) {
+        _showMessage('Failed to load daily rewards. Please try again.');
+      }
     }
   }
 
@@ -350,6 +383,35 @@ class _GameScreenState extends State<GameScreen> {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Daily Reward Button
+              OutlinedButton(
+                onPressed: _showDailyLoginModal,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  side: const BorderSide(color: AppColors.primary, width: 2),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('🎁', style: TextStyle(fontSize: 24)),
+                    SizedBox(width: 8),
+                    Text(
+                      'Daily Login Rewards',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
                       ),
                     ),
                   ],

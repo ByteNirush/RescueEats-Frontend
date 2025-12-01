@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rescueeats/core/appTheme/appColors.dart';
 import 'package:rescueeats/core/utils/responsive_utils.dart';
+import 'package:rescueeats/core/widgets/location_picker_widget.dart';
 import 'package:rescueeats/screens/admin/provider/adminProvider.dart';
 
 class CreateRestaurantScreen extends ConsumerStatefulWidget {
@@ -27,6 +29,9 @@ class _CreateRestaurantScreenState
   // Cuisines handling
   final _cuisineController = TextEditingController();
   final List<String> _selectedCuisines = [];
+
+  // Location handling
+  LatLng? _selectedLocation;
 
   bool _isLoading = false;
 
@@ -65,6 +70,9 @@ class _CreateRestaurantScreenState
         'image': _imageController.text.trim(),
         'openingTime': _openingTimeController.text.trim(),
         'closingTime': _closingTimeController.text.trim(),
+        if (_selectedLocation != null) 'latitude': _selectedLocation!.latitude,
+        if (_selectedLocation != null)
+          'longitude': _selectedLocation!.longitude,
       };
 
       await ref.read(adminControllerProvider.notifier).createRestaurant(data);
@@ -153,6 +161,73 @@ class _CreateRestaurantScreenState
                 label: 'Address',
                 icon: Icons.location_on,
                 validator: (v) => v?.isEmpty == true ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              // Map Location Picker
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.map,
+                    color: _selectedLocation != null
+                        ? AppColors.primary
+                        : Colors.grey[600],
+                  ),
+                  title: Text(
+                    _selectedLocation != null
+                        ? 'Location Selected'
+                        : 'Select Location on Map',
+                    style: TextStyle(
+                      color: _selectedLocation != null
+                          ? Colors.black87
+                          : Colors.grey[700],
+                      fontWeight: _selectedLocation != null
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  subtitle: _selectedLocation != null
+                      ? Text(
+                          'Lat: ${_selectedLocation!.latitude.toStringAsFixed(4)}, '
+                          'Lng: ${_selectedLocation!.longitude.toStringAsFixed(4)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        )
+                      : const Text(
+                          'Tap to pick the restaurant location',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                  trailing: Icon(
+                    _selectedLocation != null
+                        ? Icons.check_circle
+                        : Icons.arrow_forward_ios,
+                    color: _selectedLocation != null
+                        ? Colors.green
+                        : Colors.grey[400],
+                    size: 20,
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LocationPickerWidget(
+                          initialLocation: _selectedLocation,
+                          onLocationSelected: (location) {
+                            setState(() {
+                              _selectedLocation = location;
+                            });
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 16),
               _buildTextField(

@@ -279,7 +279,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             backgroundColor: Colors.grey[100],
                           ),
                           icon: Image.asset(
-                            'assets/icons/google_icon.png',
+                            'assets/images/google_icon.png',
                             height: 24,
                             width: 24,
                             color: Colors.grey,

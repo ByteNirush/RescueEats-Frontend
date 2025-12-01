@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rescueeats/core/model/addressModel.dart';
 import 'package:rescueeats/screens/user/address/addEditAddressScreen.dart';
 import 'package:rescueeats/screens/user/address/addressNotifier.dart';
 

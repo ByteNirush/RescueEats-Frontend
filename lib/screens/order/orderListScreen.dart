@@ -128,7 +128,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                order.restaurantName ?? "Restaurant",
+                                order.restaurantName,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,

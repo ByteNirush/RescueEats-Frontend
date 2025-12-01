@@ -331,7 +331,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value: _paymentMethod,
+                            initialValue: _paymentMethod,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Colors.white,
@@ -432,7 +432,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                       _useCoins = value;
                                     });
                                   },
-                                  activeColor: Colors.amber,
+                                  activeThumbColor: Colors.amber,
                                 ),
                               ],
                             ),

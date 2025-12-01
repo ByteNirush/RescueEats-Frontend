@@ -476,7 +476,7 @@ class _RestaurantDetailsDialogState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     DropdownButtonFormField<String>(
-                      value: _selectedOwnerId,
+                      initialValue: _selectedOwnerId,
                       decoration: InputDecoration(
                         hintText: 'Select owner',
                         border: OutlineInputBorder(

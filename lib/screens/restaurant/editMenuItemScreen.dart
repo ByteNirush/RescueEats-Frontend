@@ -182,13 +182,13 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
                 title: const Text("Available"),
                 value: _isAvailable,
                 onChanged: (v) => setState(() => _isAvailable = v),
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
               ),
               SwitchListTile(
                 title: const Text("Vegetarian"),
                 value: _isVeg,
                 onChanged: (v) => setState(() => _isVeg = v),
-                activeColor: Colors.green,
+                activeThumbColor: Colors.green,
               ),
               const SizedBox(height: 32),
               SizedBox(
