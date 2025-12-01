@@ -158,7 +158,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                               ),
                               const Spacer(),
                               Text(
-                                "Rs. ${order.totalAmount}",
+                                "Rs. ${(order.totalAmount + order.deliveryCharge - order.coinDiscount).toStringAsFixed(0)}",
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,

@@ -131,7 +131,9 @@ class OrderModel extends Equatable {
               ?.map((e) => OrderItem.fromJson(e))
               .toList() ??
           [],
-      totalAmount: (json['totalAmount'] ?? json['total'] ?? 0).toDouble(),
+      totalAmount:
+          (json['subtotal'] ?? json['totalAmount'] ?? json['total'] ?? 0)
+              .toDouble(),
       deliveryCharge: (json['deliveryCharge'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] ?? 'pending',
       deliveryAddress: json['deliveryAddress'] ?? '',

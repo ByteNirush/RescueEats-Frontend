@@ -196,11 +196,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildBillRow("Subtotal", "Rs. ${order.totalAmount}"),
+          _buildBillRow(
+            "Subtotal",
+            "Rs. ${order.totalAmount.toStringAsFixed(0)}",
+          ),
           if (order.coinDiscount > 0)
             _buildBillRow(
               "Coin Discount",
-              "- Rs. ${order.coinDiscount}",
+              "- Rs. ${order.coinDiscount.toStringAsFixed(0)}",
               color: Colors.green,
             ),
           if (order.discountedPrice != null)
@@ -219,7 +222,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           const Divider(height: 24),
           _buildBillRow(
             "Total",
-            "Rs. ${order.discountedPrice ?? (order.totalAmount - order.coinDiscount)}",
+            "Rs. ${(order.discountedPrice ?? (order.totalAmount + order.deliveryCharge - order.coinDiscount)).toStringAsFixed(0)}",
             isBold: true,
             color: AppColors.primary,
           ),

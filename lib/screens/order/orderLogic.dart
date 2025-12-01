@@ -110,7 +110,10 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
 // THE PROVIDER TO USE IN UI
 // Using autoDispose to ensure orders are refetched when user changes
 final orderControllerProvider =
-    StateNotifierProvider.autoDispose<OrderController, AsyncValue<List<OrderModel>>>((ref) {
+    StateNotifierProvider.autoDispose<
+      OrderController,
+      AsyncValue<List<OrderModel>>
+    >((ref) {
       final repository = ref.watch(orderRepositoryProvider);
       return OrderController(repository);
     });

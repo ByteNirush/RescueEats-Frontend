@@ -238,7 +238,7 @@ class CustomerOrdersTab extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  "Rs. ${order.totalAmount.toStringAsFixed(0)}",
+                  "Rs. ${(order.totalAmount + order.deliveryCharge - order.coinDiscount).toStringAsFixed(0)}",
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

@@ -236,7 +236,11 @@ class _AdminOrdersTabState extends ConsumerState<AdminOrdersTab> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          currencyFormat.format(order.totalAmount),
+                          currencyFormat.format(
+                            order.totalAmount +
+                                order.deliveryCharge -
+                                order.coinDiscount,
+                          ),
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -358,7 +362,9 @@ class _AdminOrdersTabState extends ConsumerState<AdminOrdersTab> {
               _buildDetailRow('Status', order.status.toUpperCase()),
               _buildDetailRow(
                 'Total Amount',
-                currencyFormat.format(order.totalAmount),
+                currencyFormat.format(
+                  order.totalAmount + order.deliveryCharge - order.coinDiscount,
+                ),
               ),
               _buildDetailRow('Payment Method', order.paymentMethod),
               _buildDetailRow('Delivery Address', order.deliveryAddress),

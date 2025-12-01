@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rescueeats/core/appTheme/appColors.dart';
 import 'package:rescueeats/core/model/orderModel.dart';
 import 'package:rescueeats/features/providers/cart_provider.dart';
 import 'package:rescueeats/screens/auth/provider/authprovider.dart';
 import 'package:rescueeats/screens/order/orderLogic.dart';
 import 'package:rescueeats/core/services/restaurantApiService.dart';
+import 'package:rescueeats/core/widgets/location_picker_widget.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -22,6 +24,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   String _paymentMethod = 'cod'; // Default
   final RestaurantApiService _restaurantApiService = RestaurantApiService();
   String? _restaurantAddress;
+  LatLng? _selectedDeliveryLocation;
 
   @override
   void initState() {
@@ -63,9 +66,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     // If pickup is selected, set restaurant address
     if (orderType == 'pickup' && _restaurantAddress != null) {
       _addressController.text = _restaurantAddress!;
+      _selectedDeliveryLocation = null; // Clear delivery location
     } else if (orderType == 'delivery') {
       // Clear address when switching back to delivery
       _addressController.text = '';
+      _selectedDeliveryLocation = null;
     }
   }
 
@@ -312,38 +317,136 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          TextField(
-                            controller: _addressController,
-                            readOnly: cart.orderType == 'pickup',
-                            decoration: InputDecoration(
-                              hintText: cart.orderType == 'pickup'
-                                  ? "Restaurant address (auto-filled)"
-                                  : "Enter delivery address",
-                              filled: true,
-                              fillColor: cart.orderType == 'pickup'
-                                  ? Colors.grey.shade100
-                                  : Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+
+                          // For pickup: simple text field (read-only)
+                          if (cart.orderType == 'pickup')
+                            TextField(
+                              controller: _addressController,
+                              readOnly: true,
+                              decoration: InputDecoration(
+                                hintText: "Restaurant address (auto-filled)",
+                                filled: true,
+                                fillColor: Colors.grey.shade100,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.location_on,
+                                  color: Colors.grey,
+                                ),
+                                suffixIcon: const Icon(
+                                  Icons.lock_outline,
+                                  color: Colors.grey,
+                                  size: 18,
                                 ),
                               ),
-                              prefixIcon: Icon(
-                                Icons.location_on,
-                                color: cart.orderType == 'pickup'
-                                    ? Colors.grey
-                                    : AppColors.primary,
-                              ),
-                              suffixIcon: cart.orderType == 'pickup'
-                                  ? const Icon(
-                                      Icons.lock_outline,
-                                      color: Colors.grey,
-                                      size: 18,
-                                    )
-                                  : null,
                             ),
-                          ),
+
+                          // For delivery: text field with map picker button
+                          if (cart.orderType == 'delivery')
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Column(
+                                children: [
+                                  TextField(
+                                    controller: _addressController,
+                                    maxLines: 2,
+                                    decoration: InputDecoration(
+                                      hintText:
+                                          "Enter delivery address or select on map",
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon: const Icon(
+                                        Icons.location_on,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => LocationPickerWidget(
+                                            initialLocation:
+                                                _selectedDeliveryLocation,
+                                            onLocationSelected: (location) {
+                                              setState(() {
+                                                _selectedDeliveryLocation =
+                                                    location;
+                                                // Update the address field with coordinates
+                                                _addressController.text =
+                                                    'Lat: ${location.latitude.toStringAsFixed(6)}, '
+                                                    'Lng: ${location.longitude.toStringAsFixed(6)}';
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.map,
+                                            color:
+                                                _selectedDeliveryLocation !=
+                                                    null
+                                                ? Colors.green
+                                                : AppColors.primary,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              _selectedDeliveryLocation != null
+                                                  ? 'Location Selected on Map'
+                                                  : 'Select Location on Map',
+                                              style: TextStyle(
+                                                color:
+                                                    _selectedDeliveryLocation !=
+                                                        null
+                                                    ? Colors.green
+                                                    : AppColors.primary,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            _selectedDeliveryLocation != null
+                                                ? Icons.check_circle
+                                                : Icons.arrow_forward_ios,
+                                            color:
+                                                _selectedDeliveryLocation !=
+                                                    null
+                                                ? Colors.green
+                                                : Colors.grey[400],
+                                            size: 18,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           const SizedBox(height: 16),
 
                           // Contact Phone Input
@@ -827,6 +930,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     setState(() => _isPlacingOrder = true);
 
     try {
+      // Calculate the actual subtotal from items (not including delivery)
+      final subtotal = cart.totalAmount;
+      final deliveryCharge = _getDeliveryCharge();
+      final coinDiscount = _useCoins ? _calculateCoinDiscount(subtotal) : 0.0;
+
       final order = OrderModel(
         id: '', // Server generates ID
         restaurantId: cart.restaurantId!,
@@ -839,14 +947,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
             )
             .toList(),
-        totalAmount: _calculateTotal(cart.totalAmount),
+        totalAmount: subtotal, // Store subtotal here, not the calculated total
+        deliveryCharge: deliveryCharge, // Store delivery charge separately
+        coinDiscount: coinDiscount, // Store coin discount
         status: 'pending',
         deliveryAddress: _addressController.text.trim(),
         contactPhone: _phoneController.text.trim(),
         paymentMethod: _paymentMethod,
         orderType: cart.orderType, // Add order type (delivery or pickup)
         coinsUsed: _useCoins
-            ? (_calculateCoinDiscount(cart.totalAmount) * 10).toInt()
+            ? (coinDiscount * 10).toInt()
             : 0, // 10 coins = 1 Rs
         createdAt: DateTime.now(),
       );

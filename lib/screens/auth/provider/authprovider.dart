@@ -32,10 +32,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final user = await _apiService.login(emailOrPhone, password);
-      
+
       // Invalidate order provider to ensure fresh data for new user
       _ref.invalidate(orderControllerProvider);
-      
+
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
 
       // Register FCM Token
@@ -160,7 +160,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Clear restaurant data on logout
       _ref.read(restaurantOwnerProvider.notifier).clear();
-      
+
       // Invalidate all providers to clear cached data
       _ref.invalidate(orderControllerProvider);
 
