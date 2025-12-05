@@ -4,14 +4,22 @@ import 'package:rescueeats/core/services/api_service.dart';
 import 'package:rescueeats/core/model/game/daily_task.dart';
 
 // 1. Define the Interface (Contract)
-// 1. Define the Interface (Contract)
 abstract class IOrderRepository {
   Future<List<OrderModel>> fetchOrders();
   Future<OrderModel> getOrderById(String id);
   Future<void> updateOrderStatus(String orderId, String status);
   Future<OrderModel> placeOrder(OrderModel order);
-  Future<void> cancelOrder(String orderId);
-  Future<void> rateOrder(String orderId, int rating, String review);
+  Future<void> cancelOrder(
+    String orderId, {
+    int discountPercent,
+    String? cancelReason,
+  });
+  Future<Map<String, dynamic>> rateOrder(
+    String orderId,
+    int rating,
+    String review, {
+    List<Map<String, dynamic>>? itemRatings,
+  });
 }
 
 // 2. Implement the Real Repository
@@ -44,13 +52,31 @@ class OrderRepository implements IOrderRepository {
   }
 
   @override
-  Future<void> cancelOrder(String orderId) async {
-    await _apiService.cancelOrder(orderId);
+  Future<void> cancelOrder(
+    String orderId, {
+    int discountPercent = 0,
+    String? cancelReason,
+  }) async {
+    await _apiService.cancelOrder(
+      orderId,
+      discountPercent: discountPercent,
+      cancelReason: cancelReason,
+    );
   }
 
   @override
-  Future<void> rateOrder(String orderId, int rating, String review) async {
-    await _apiService.rateOrder(orderId, rating, review);
+  Future<Map<String, dynamic>> rateOrder(
+    String orderId,
+    int rating,
+    String review, {
+    List<Map<String, dynamic>>? itemRatings,
+  }) async {
+    return await _apiService.rateOrder(
+      orderId,
+      rating,
+      review,
+      itemRatings: itemRatings,
+    );
   }
 }
 

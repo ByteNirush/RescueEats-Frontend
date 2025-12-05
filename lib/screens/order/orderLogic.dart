@@ -90,7 +90,11 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
   }
 
   // 4. Cancel Order
-  Future<void> cancelOrder(String orderId) async {
+  Future<void> cancelOrder(
+    String orderId, {
+    int discountPercent = 0,
+    String? cancelReason,
+  }) async {
     final previousState = state;
     // Optimistic update
     state = state.whenData((orders) {
@@ -116,19 +120,34 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
     });
 
     try {
-      await _repository.cancelOrder(orderId);
+      await _repository.cancelOrder(
+        orderId,
+        discountPercent: discountPercent,
+        cancelReason: cancelReason,
+      );
     } catch (e) {
       state = previousState;
       rethrow;
     }
   }
 
-  // 5. Rate Order
-  Future<void> rateOrder(String orderId, int rating, String review) async {
+  // 5. Rate Order with item ratings
+  Future<Map<String, dynamic>> rateOrder(
+    String orderId,
+    int rating,
+    String review, {
+    List<Map<String, dynamic>>? itemRatings,
+  }) async {
     try {
-      await _repository.rateOrder(orderId, rating, review);
+      final result = await _repository.rateOrder(
+        orderId,
+        rating,
+        review,
+        itemRatings: itemRatings,
+      );
       // Refresh to get updated order with rating
       await fetchOrders();
+      return result;
     } catch (e) {
       rethrow;
     }

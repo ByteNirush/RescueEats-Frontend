@@ -671,58 +671,165 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
 
                 const SizedBox(height: 16),
 
-                // Action Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed:
-                        order.status == 'delivered' ||
-                            order.status == 'cancelled' ||
-                            order.status == 'out_for_delivery' ||
-                            _updatingOrders.contains(order.id)
-                        ? null
-                        : () => _handleOrderStatusUpdate(order),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getStatusColor(order.status),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: _updatingOrders.contains(order.id) ? 0 : 2,
-                      shadowColor: _getStatusColor(
-                        order.status,
-                      ).withOpacity(0.5),
-                    ),
-                    child: _updatingOrders.contains(order.id)
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
+                // Action Buttons
+                if (order.status == 'pending' ||
+                    order.status == 'preparing') ...[
+                  // Show both buttons for pending and preparing orders
+                  Row(
+                    children: [
+                      // Cancel Button (only show for pending and preparing, not for ready)
+                      Expanded(
+                        flex: 2,
+                        child: SizedBox(
+                          height: 50,
+                          child: OutlinedButton(
+                            onPressed: _updatingOrders.contains(order.id)
+                                ? null
+                                : () => _handleCancelOrder(order),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                color: Colors.red,
+                                width: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _getActionIcon(order.status, order.orderType),
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _getActionText(order.status, order.orderType),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.cancel_outlined,
+                                  color: Colors.red,
+                                  size: 20,
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 8),
+                                Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Primary action button (Accept/Mark Ready)
+                      Expanded(
+                        flex: 3,
+                        child: SizedBox(
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _updatingOrders.contains(order.id)
+                                ? null
+                                : () => _handleOrderStatusUpdate(order),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _getStatusColor(order.status),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                              shadowColor: _getStatusColor(
+                                order.status,
+                              ).withOpacity(0.5),
+                            ),
+                            child: _updatingOrders.contains(order.id)
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _getActionIcon(
+                                          order.status,
+                                          order.orderType,
+                                        ),
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _getActionText(
+                                          order.status,
+                                          order.orderType,
+                                        ),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ] else ...[
+                  // Single button for non-preparing orders
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed:
+                          order.status == 'delivered' ||
+                              order.status == 'cancelled' ||
+                              order.status == 'out_for_delivery' ||
+                              _updatingOrders.contains(order.id)
+                          ? null
+                          : () => _handleOrderStatusUpdate(order),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _getStatusColor(order.status),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: _updatingOrders.contains(order.id) ? 0 : 2,
+                        shadowColor: _getStatusColor(
+                          order.status,
+                        ).withOpacity(0.5),
+                      ),
+                      child: _updatingOrders.contains(order.id)
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _getActionIcon(order.status, order.orderType),
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _getActionText(order.status, order.orderType),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -741,6 +848,184 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
         return Colors.green;
       default:
         return Colors.grey;
+    }
+  }
+
+  // Handle cancel order with discount input
+  Future<void> _handleCancelOrder(OrderModel order) async {
+    final TextEditingController discountController = TextEditingController(
+      text: '50',
+    );
+    final TextEditingController reasonController = TextEditingController();
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.cancel, color: Colors.red),
+            SizedBox(width: 12),
+            Text('Cancel Order'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'This order will be automatically added to the marketplace with the discount you specify.',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Order #${order.id.substring(order.id.length - 6).toUpperCase()}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Total: Rs. ${order.totalAmount.toStringAsFixed(0)}',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: discountController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Discount Percentage',
+                  hintText: 'Enter discount (0-100)',
+                  prefixIcon: const Icon(Icons.percent),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Cancellation Reason (Optional)',
+                  hintText: 'E.g., Customer no-show, wrong order',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('Back'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final discount = int.tryParse(discountController.text) ?? 0;
+              Navigator.pop(ctx, {
+                'discount': discount.clamp(0, 100),
+                'reason': reasonController.text.trim().isEmpty
+                    ? 'Order canceled by restaurant'
+                    : reasonController.text.trim(),
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Cancel Order',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null) return; // User cancelled dialog
+
+    // Mark as updating
+    setState(() {
+      _updatingOrders.add(order.id);
+    });
+
+    try {
+      await ref
+          .read(orderControllerProvider.notifier)
+          .cancelOrder(
+            order.id,
+            discountPercent: result['discount'] as int,
+            cancelReason: result['reason'] as String,
+          );
+
+      if (mounted) {
+        setState(() {
+          _updatingOrders.remove(order.id);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('Order canceled and added to marketplace!'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _updatingOrders.remove(order.id);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Failed to cancel order: ${e.toString()}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 

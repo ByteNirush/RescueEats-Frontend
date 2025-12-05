@@ -106,30 +106,24 @@ class _DailyLoginModalState extends State<DailyLoginModal>
 
   Future<void> _claimReward() async {
     if (_isClaimed || _isClaimingInProgress) {
-      print(
-        '[DailyLoginModal] Cannot claim: claimed=$_isClaimed, inProgress=$_isClaimingInProgress',
-      );
       return;
     }
 
     if (!mounted) return;
+    setState(() {
+      _isClaimingInProgress = true;
+    });
 
-    print('[DailyLoginModal] Starting claim process...');
     setState(() {
       _isClaimingInProgress = true;
     });
 
     try {
-      print('[DailyLoginModal] Calling loginService.claimReward()...');
       final result = await widget.loginService.claimReward();
-      print('[DailyLoginModal] Received result: $result');
 
       if (!mounted) return;
 
       if (result['success'] == true) {
-        print(
-          '[DailyLoginModal] Claim successful! Reward: ${result['reward']}',
-        );
         setState(() {
           _isClaimed = true;
 
@@ -160,7 +154,6 @@ class _DailyLoginModalState extends State<DailyLoginModal>
         }
       } else {
         final errorMessage = result['message'] ?? 'Failed to claim reward';
-        print('[DailyLoginModal] Claim failed: $errorMessage');
 
         // Check if already claimed today
         if (errorMessage.contains('Already claimed')) {
@@ -197,7 +190,6 @@ class _DailyLoginModalState extends State<DailyLoginModal>
         }
       }
     } catch (e) {
-      print('[DailyLoginModal] Exception: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

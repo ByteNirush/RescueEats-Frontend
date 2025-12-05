@@ -11,6 +11,11 @@ class MenuItemModel extends Equatable {
   final bool isVeg;
   final int? discount; // percentage
 
+  // Rating statistics
+  final double averageRating;
+  final int totalRatings;
+  final Map<String, int>? ratingBreakdown;
+
   const MenuItemModel({
     required this.id,
     required this.name,
@@ -21,6 +26,9 @@ class MenuItemModel extends Equatable {
     required this.isAvailable,
     required this.isVeg,
     this.discount,
+    this.averageRating = 0.0,
+    this.totalRatings = 0,
+    this.ratingBreakdown,
   });
 
   factory MenuItemModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +42,17 @@ class MenuItemModel extends Equatable {
       isAvailable: json['isAvailable'] ?? true,
       isVeg: json['isVeg'] ?? false,
       discount: json['discount'],
+      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      totalRatings: json['totalRatings'] ?? 0,
+      ratingBreakdown: json['ratingBreakdown'] != null
+          ? {
+              'fiveStar': json['ratingBreakdown']['fiveStar'] ?? 0,
+              'fourStar': json['ratingBreakdown']['fourStar'] ?? 0,
+              'threeStar': json['ratingBreakdown']['threeStar'] ?? 0,
+              'twoStar': json['ratingBreakdown']['twoStar'] ?? 0,
+              'oneStar': json['ratingBreakdown']['oneStar'] ?? 0,
+            }
+          : null,
     );
   }
 
@@ -48,6 +67,9 @@ class MenuItemModel extends Equatable {
       'isAvailable': isAvailable,
       'isVeg': isVeg,
       'discount': discount,
+      'averageRating': averageRating,
+      'totalRatings': totalRatings,
+      if (ratingBreakdown != null) 'ratingBreakdown': ratingBreakdown,
     };
   }
 
@@ -70,5 +92,8 @@ class MenuItemModel extends Equatable {
     isAvailable,
     isVeg,
     discount,
+    averageRating,
+    totalRatings,
+    ratingBreakdown,
   ];
 }

@@ -69,6 +69,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  // Public method to refresh game data (callable from parent widgets)
+  void refresh() {
+    _loadData();
+  }
+
   Future<void> _loadData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -124,7 +129,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           // Check and show daily login modal
           try {
             final canClaim = await _dailyLoginService.canClaimToday();
-            print('[GameScreen] Can claim today: $canClaim');
             if (canClaim && mounted) {
               // Small delay to let UI render first
               Future.delayed(const Duration(milliseconds: 500), () {
@@ -134,7 +138,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               });
             }
           } catch (e) {
-            print('[GameScreen] Daily login check error: $e');
             // Silently fail - not critical
           }
         } else {
@@ -192,18 +195,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (!mounted) return;
 
     try {
-      print('[GameScreen] Loading daily login state...');
       final loginState = await _dailyLoginService.getLoginState();
 
       if (!mounted) return;
 
       // Double-check if user can actually claim
       if (!loginState.canClaimToday) {
-        print('[GameScreen] Cannot claim today, skipping modal');
         return;
       }
-
-      print('[GameScreen] Showing daily login modal');
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -211,21 +210,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           loginState: loginState,
           loginService: _dailyLoginService,
           onRewardClaimed: () {
-            print('[GameScreen] Reward claimed, reloading data...');
             // Reload data to update coins and XP
             _loadData();
           },
         ),
       );
-      print('[GameScreen] Daily login modal closed');
 
       // Reload data after modal closes to ensure coins are updated
       if (mounted) {
-        print('[GameScreen] Reloading game data after modal close...');
         await _loadData();
       }
     } catch (e) {
-      print('[GameScreen] Error showing daily login modal: $e');
       if (mounted) {
         _showMessage('Failed to load daily rewards. Please try again.');
       }

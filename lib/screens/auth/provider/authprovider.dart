@@ -45,7 +45,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           await _apiService.registerFcmToken(fcmToken);
         }
       } catch (e) {
-        print('FCM Token Error: $e');
+        // FCM token registration failed, not critical
       }
 
       // Auto-fetch restaurant for restaurant owners
@@ -101,7 +101,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           await _apiService.registerFcmToken(fcmToken);
         }
       } catch (e) {
-        print('FCM Token Error: $e');
+        // FCM token registration failed, not critical
       }
 
       // Auto-fetch restaurant for restaurant owners

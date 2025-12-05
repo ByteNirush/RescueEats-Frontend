@@ -9,6 +9,7 @@ import 'package:rescueeats/screens/auth/provider/authprovider.dart';
 import 'package:rescueeats/screens/order/orderLogic.dart';
 import 'package:rescueeats/core/services/restaurantApiService.dart';
 import 'package:rescueeats/core/widgets/location_picker_widget.dart';
+import 'package:rescueeats/core/services/api_service.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -23,8 +24,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   final TextEditingController _phoneController = TextEditingController();
   String _paymentMethod = 'cod'; // Default
   final RestaurantApiService _restaurantApiService = RestaurantApiService();
+  final ApiService _apiService = ApiService();
   String? _restaurantAddress;
   LatLng? _selectedDeliveryLocation;
+  int _userCoins = 0;
+  bool _isLoadingCoins = true;
 
   @override
   void initState() {
@@ -36,6 +40,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
     // Fetch restaurant address if needed
     _loadRestaurantAddress();
+    // Fetch user coins
+    _loadUserCoins();
   }
 
   Future<void> _loadRestaurantAddress() async {
@@ -56,6 +62,26 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         }
       } catch (e) {
         debugPrint('Error loading restaurant address: $e');
+      }
+    }
+  }
+
+  Future<void> _loadUserCoins() async {
+    try {
+      final stats = await _apiService.getUserStats();
+      if (mounted) {
+        setState(() {
+          _userCoins = stats['coins'] ?? 0;
+          _isLoadingCoins = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user coins: $e');
+      if (mounted) {
+        setState(() {
+          _userCoins = 0;
+          _isLoadingCoins = false;
+        });
       }
     }
   }
@@ -651,15 +677,23 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.amber.shade50,
+                              color: _userCoins >= 100
+                                  ? Colors.amber.shade50
+                                  : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.amber.shade200),
+                              border: Border.all(
+                                color: _userCoins >= 100
+                                    ? Colors.amber.shade200
+                                    : Colors.grey.shade300,
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.monetization_on,
-                                  color: Colors.amber,
+                                  color: _userCoins >= 100
+                                      ? Colors.amber
+                                      : Colors.grey,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -667,17 +701,63 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        "Redeem Coins",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                      Row(
+                                        children: [
+                                          const Text(
+                                            "Redeem Coins",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          if (_isLoadingCoins)
+                                            const SizedBox(
+                                              width: 12,
+                                              height: 12,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          else
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: _userCoins >= 100
+                                                    ? Colors.green.shade100
+                                                    : Colors.red.shade100,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                '🪙 $_userCoins',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _userCoins >= 100
+                                                      ? Colors.green.shade700
+                                                      : Colors.red.shade700,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
+                                      const SizedBox(height: 4),
                                       Text(
-                                        "Use 100 coins for Rs. 10 off",
+                                        _userCoins >= 100
+                                            ? "Use 100 coins for Rs. 10 off"
+                                            : "Minimum 100 coins required (You have $_userCoins)",
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey[600],
+                                          color: _userCoins >= 100
+                                              ? Colors.grey[600]
+                                              : Colors.red.shade600,
+                                          fontWeight: _userCoins >= 100
+                                              ? FontWeight.normal
+                                              : FontWeight.w500,
                                         ),
                                       ),
                                     ],
@@ -685,11 +765,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 ),
                                 Switch(
                                   value: _useCoins,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _useCoins = value;
-                                    });
-                                  },
+                                  onChanged: _userCoins >= 100
+                                      ? (value) {
+                                          setState(() {
+                                            _useCoins = value;
+                                          });
+                                        }
+                                      : null,
                                   activeThumbColor: Colors.amber,
                                 ),
                               ],
@@ -877,15 +959,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   static const double _deliveryCharge = 50.0; // Rs. 50 delivery charge
 
   double _calculateCoinDiscount(double total) {
-    // Logic: Max 30% of total
-    double maxDiscount = total * 0.30;
-    // Assuming user has enough coins for now, or fetch user coins
-    // For simplicity, let's say we apply max possible discount up to 100 coins = 10 Rs logic
-    // This needs real user coin balance.
-    // Let's assume a fixed discount for demo or fetch from user provider if available.
-    // Ideally: min(userCoins / 10, maxDiscount)
-    // Here we'll just show the max potential discount for the UI
-    return double.parse(maxDiscount.toStringAsFixed(2));
+    // Validate user has enough coins
+    if (_userCoins < 100) {
+      return 0.0;
+    }
+
+    // Business Rule: Only exactly 100 coins = Rs. 10 off
+    // No more coins can be used, it's a fixed redemption
+    return 10.0;
   }
 
   double _getDeliveryCharge() {
@@ -929,11 +1010,28 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     setState(() => _isPlacingOrder = true);
 
+    // Validate coin redemption if enabled
+    if (_useCoins && _userCoins < 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "You need at least 100 coins to redeem. You have $_userCoins coins.",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() => _isPlacingOrder = false);
+      return;
+    }
+
     try {
       // Calculate the actual subtotal from items (not including delivery)
       final subtotal = cart.totalAmount;
       final deliveryCharge = _getDeliveryCharge();
       final coinDiscount = _useCoins ? _calculateCoinDiscount(subtotal) : 0.0;
+      final coinsUsed = _useCoins
+          ? 100
+          : 0; // Always exactly 100 coins for Rs. 10 off
 
       final order = OrderModel(
         id: '', // Server generates ID
@@ -955,9 +1053,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         contactPhone: _phoneController.text.trim(),
         paymentMethod: _paymentMethod,
         orderType: cart.orderType, // Add order type (delivery or pickup)
-        coinsUsed: _useCoins
-            ? (coinDiscount * 10).toInt()
-            : 0, // 10 coins = 1 Rs
+        coinsUsed: coinsUsed, // Coins used (100 coins = Rs. 10)
         createdAt: DateTime.now(),
       );
 
@@ -965,6 +1061,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       // ... (rest of function)
 
       if (mounted) {
+        // Refresh user coins to reflect the deduction
+        await _loadUserCoins();
+
         ref.read(cartProvider.notifier).clearCart();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Order placed successfully!")),

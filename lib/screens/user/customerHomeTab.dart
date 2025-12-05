@@ -74,7 +74,7 @@ class CustomerHomeTab extends ConsumerWidget {
                   color: Colors.black,
                 ),
                 onPressed: () {
-                  // TODO: Navigate to notifications
+                  // Notifications feature to be implemented
                 },
               ),
               const SizedBox(width: 8),
@@ -329,7 +329,10 @@ class CustomerHomeTab extends ConsumerWidget {
                           id: restaurant.id,
                           name: restaurant.name,
                           tags: restaurant.cuisineType.join(" • "),
-                          rating: restaurant.rating.toString(),
+                          rating: restaurant.averageRating > 0 
+                              ? restaurant.averageRating.toStringAsFixed(1)
+                              : restaurant.rating.toStringAsFixed(1),
+                          totalRatings: restaurant.totalRatings,
                           time: "${restaurant.deliveryTime} min",
                           deliveryFee: "Rs. ${restaurant.deliveryFee}",
                           imageUrl: restaurant.image,
@@ -563,6 +566,7 @@ class CustomerHomeTab extends ConsumerWidget {
     required String name,
     required String tags,
     required String rating,
+    required int totalRatings,
     required String time,
     required String deliveryFee,
     required String imageUrl,
@@ -738,6 +742,17 @@ class CustomerHomeTab extends ConsumerWidget {
                       ),
                       const SizedBox(width: 2),
                       const Icon(Icons.star, size: 10, color: Colors.white),
+                      if (totalRatings > 0) ...[
+                        const SizedBox(width: 2),
+                        Text(
+                          '($totalRatings)',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

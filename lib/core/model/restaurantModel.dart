@@ -66,6 +66,11 @@ class RestaurantModel extends Equatable {
   final OpeningHoursModel openingHours;
   final List<MenuItemModel> menu;
 
+  // Rating statistics
+  final double averageRating;
+  final int totalRatings;
+  final Map<String, int>? ratingBreakdown;
+
   // Delivery and Pickup Support
   final bool supportsDelivery;
   final bool supportsPickup;
@@ -96,6 +101,9 @@ class RestaurantModel extends Equatable {
     this.ownerId,
     this.ownerName,
     this.ownerEmail,
+    this.averageRating = 0.0,
+    this.totalRatings = 0,
+    this.ratingBreakdown,
   });
 
   factory RestaurantModel.fromJson(Map<String, dynamic> json) {
@@ -130,7 +138,19 @@ class RestaurantModel extends Equatable {
       cuisineType: List<String>.from(
         json['cuisineType'] ?? json['cuisines'] ?? [],
       ),
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      rating:
+          (json['rating'] ?? json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      totalRatings: json['totalRatings'] ?? 0,
+      ratingBreakdown: json['ratingBreakdown'] != null
+          ? {
+              'fiveStar': json['ratingBreakdown']['fiveStar'] ?? 0,
+              'fourStar': json['ratingBreakdown']['fourStar'] ?? 0,
+              'threeStar': json['ratingBreakdown']['threeStar'] ?? 0,
+              'twoStar': json['ratingBreakdown']['twoStar'] ?? 0,
+              'oneStar': json['ratingBreakdown']['oneStar'] ?? 0,
+            }
+          : null,
       deliveryTime: json['deliveryTime'] ?? 30,
       deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
       minimumOrder: (json['minimumOrder'] as num?)?.toDouble() ?? 0.0,
@@ -162,6 +182,9 @@ class RestaurantModel extends Equatable {
       'image': image,
       'cuisineType': cuisineType,
       'rating': rating,
+      'averageRating': averageRating,
+      'totalRatings': totalRatings,
+      if (ratingBreakdown != null) 'ratingBreakdown': ratingBreakdown,
       'deliveryTime': deliveryTime,
       'deliveryFee': deliveryFee,
       'minimumOrder': minimumOrder,
@@ -190,6 +213,9 @@ class RestaurantModel extends Equatable {
     image,
     cuisineType,
     rating,
+    averageRating,
+    totalRatings,
+    ratingBreakdown,
     deliveryTime,
     deliveryFee,
     minimumOrder,

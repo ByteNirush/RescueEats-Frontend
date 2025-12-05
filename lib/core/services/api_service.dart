@@ -442,6 +442,7 @@ class ApiService {
         'paymentMethod': order.paymentMethod,
         'orderType': order.orderType, // Added orderType
         'coinsUsed': order.coinsUsed, // Added coinsUsed
+        'coinDiscount': order.coinDiscount, // Added coinDiscount
       };
 
       final response = await http
@@ -475,11 +476,23 @@ class ApiService {
     }
   }
 
-  Future<void> cancelOrder(String orderId) async {
+  Future<void> cancelOrder(
+    String orderId, {
+    int discountPercent = 0,
+    String? cancelReason,
+  }) async {
     try {
       final headers = await _getHeaders();
+      final body = {
+        'discountPercent': discountPercent,
+        'cancelReason': cancelReason ?? 'Order canceled by restaurant',
+      };
       final response = await http
-          .post(Uri.parse('$baseUrl/orders/$orderId/cancel'), headers: headers)
+          .post(
+            Uri.parse('$baseUrl/orders/$orderId/cancel'),
+            headers: headers,
+            body: jsonEncode(body),
+          )
           .timeout(const Duration(seconds: 60));
       _processResponse(response);
     } catch (e) {
@@ -487,17 +500,66 @@ class ApiService {
     }
   }
 
-  Future<void> rateOrder(String orderId, int rating, String review) async {
+  Future<Map<String, dynamic>> rateOrder(
+    String orderId,
+    int rating,
+    String review, {
+    List<Map<String, dynamic>>? itemRatings,
+  }) async {
     try {
       final headers = await _getHeaders();
+      final body = {'rating': rating, 'review': review};
+
+      if (itemRatings != null && itemRatings.isNotEmpty) {
+        body['itemRatings'] = itemRatings;
+      }
+
       final response = await http
           .post(
             Uri.parse('$baseUrl/orders/$orderId/rate'),
             headers: headers,
-            body: jsonEncode({'rating': rating, 'review': review}),
+            body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 60));
-      _processResponse(response);
+      final data = _processResponse(response);
+      return data;
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> getRestaurantRatings(String restaurantId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/restaurants/$restaurantId/ratings'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 30));
+      final data = _processResponse(response);
+      return data;
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> getMenuItemRatings(
+    String restaurantId,
+    String menuItemId,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(
+            Uri.parse(
+              '$baseUrl/restaurants/$restaurantId/menu/$menuItemId/ratings',
+            ),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 30));
+      final data = _processResponse(response);
+      return data;
     } catch (e) {
       throw AppException(e.toString());
     }
@@ -640,7 +702,7 @@ class ApiService {
       final data = _processResponse(response);
       return data;
     } catch (e) {
-      print('[API] Daily reward status check failed (not critical): $e');
+      // Daily reward status check failed, not critical
       return null;
     }
   }
@@ -648,10 +710,7 @@ class ApiService {
   /// Claim daily reward
   Future<Map<String, dynamic>> claimDailyReward() async {
     try {
-      print('[API] Claiming daily reward...');
       final headers = await _getHeaders();
-      print('[API] Headers: ${headers.keys.toList()}');
-      print('[API] URL: $baseUrl/game/daily-reward');
 
       final response = await http
           .post(
@@ -661,16 +720,10 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 30));
 
-      print('[API] Daily reward response status: ${response.statusCode}');
-      print('[API] Daily reward response body: ${response.body}');
-
       final result = _processResponse(response);
-      print('[API] Daily reward parsed result: $result');
 
       return result;
     } catch (e, stackTrace) {
-      print('[API] Daily reward error: $e');
-      print('[API] Stack trace: $stackTrace');
       return {
         'success': false,
         'message': 'Unable to connect to server: ${e.toString()}',
@@ -895,6 +948,22 @@ class ApiService {
       final data = _processResponse(response);
       final List<dynamic> list = data['addresses'] ?? [];
       return list.map((e) => AddressModel.fromJson(e)).toList();
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  // --- USER STATS ---
+
+  Future<Map<String, dynamic>> getUserStats() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(Uri.parse('$baseUrl/users/me/stats'), headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      final data = _processResponse(response);
+      return data['stats'] ?? {};
     } catch (e) {
       throw AppException(e.toString());
     }

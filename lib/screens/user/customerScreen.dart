@@ -20,14 +20,22 @@ class CustomerDashboard extends StatefulWidget {
 
 class _CustomerDashboardState extends State<CustomerDashboard> {
   int _selectedIndex = 0;
+  final GlobalKey<State<GameScreen>> _gameScreenKey =
+      GlobalKey<State<GameScreen>>();
 
-  final List<Widget> _pages = [
-    const CustomerHomeTab(),
-    const CancellationScreen(),
-    const GameScreen(),
-    const CustomerOrdersTab(),
-    const CustomerProfileScreen(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const CustomerHomeTab(),
+      const CancellationScreen(),
+      GameScreen(key: _gameScreenKey),
+      const CustomerOrdersTab(),
+      const CustomerProfileScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,8 +48,13 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         ),
         child: NavigationBar(
           selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
+          onDestinationSelected: (index) {
+            setState(() => _selectedIndex = index);
+            // Refresh game data when navigating to game tab
+            if (index == 2) {
+              (_gameScreenKey.currentState as dynamic)?.refresh();
+            }
+          },
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
           indicatorColor: AppColors.primary.withOpacity(0.1), // Orange tint
@@ -340,6 +353,8 @@ class _CustomerOrdersTabState extends ConsumerState<CustomerOrdersTab>
                           builder: (context) => RatingDialog(
                             orderId: order.id,
                             restaurantName: order.restaurantName,
+                            restaurantId: order.restaurantId,
+                            orderItems: order.items,
                           ),
                         );
                       },

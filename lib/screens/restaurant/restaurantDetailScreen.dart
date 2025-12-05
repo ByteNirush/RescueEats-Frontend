@@ -108,9 +108,57 @@ class RestaurantDetailScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        restaurant.cuisineType.join(" • "),
-                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                      Row(
+                        children: [
+                          if (restaurant.averageRating > 0) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    restaurant.averageRating.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  const Icon(
+                                    Icons.star,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${restaurant.totalRatings} ratings',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                          ],
+                          Expanded(
+                            child: Text(
+                              restaurant.cuisineType.join(" • "),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -376,6 +424,30 @@ class RestaurantDetailScreen extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
+                    if (item.averageRating > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.star, size: 14, color: Colors.amber),
+                          const SizedBox(width: 2),
+                          Text(
+                            item.averageRating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${item.totalRatings})',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

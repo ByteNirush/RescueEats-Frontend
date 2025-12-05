@@ -19,11 +19,10 @@ class DailyLoginService {
 
       if (backendStatus != null && backendStatus['success'] == true) {
         final canClaim = backendStatus['canClaimToday'] ?? false;
-        print('[DailyLogin] Backend says canClaimToday: $canClaim');
         return canClaim;
       }
     } catch (e) {
-      print('[DailyLogin] Backend check failed: $e');
+      // Backend check failed, using local state
     }
 
     // Fallback to local check
@@ -47,8 +46,6 @@ class DailyLoginService {
 
       if (backendStatus != null && backendStatus['success'] == true) {
         // Use backend data as source of truth
-        print('[DailyLogin] Using backend data');
-
         final rewards =
             (backendStatus['rewards'] as List<dynamic>?)
                 ?.map(
@@ -69,13 +66,10 @@ class DailyLoginService {
         // Save to local storage for offline access
         await _saveState(state);
 
-        print(
-          '[DailyLogin] Backend state - Day: ${state.currentDay}, CanClaim: ${state.canClaimToday}',
-        );
         return state;
       }
     } catch (e) {
-      print('[DailyLogin] Backend fetch failed, using local state: $e');
+      // Backend fetch failed, using local state
     }
 
     // Fallback to local storage if backend fails
@@ -87,12 +81,8 @@ class DailyLoginService {
     if (stateJson != null) {
       // Load from local storage
       try {
-        state = DailyLoginState.fromJson(jsonDecode(stateJson));
-        print(
-          '[DailyLogin] Loaded local state - Streak: ${state.currentStreak}, LastClaim: ${state.lastClaimDate}',
-        );
+        state = DailyLoginState.fromJson(json.decode(stateJson));
       } catch (e) {
-        print('[DailyLogin] Error parsing state, resetting: $e');
         state = DailyLoginState(
           currentStreak: 0,
           lastClaimDate: null,
@@ -102,7 +92,6 @@ class DailyLoginService {
       }
     } else {
       // Initialize new state
-      print('[DailyLogin] No saved state, initializing new');
       state = DailyLoginState(
         currentStreak: 0,
         lastClaimDate: null,
@@ -119,11 +108,8 @@ class DailyLoginService {
       final now = DateTime.now();
       final daysSinceLastClaim = now.difference(state.lastClaimDate!).inDays;
 
-      print('[DailyLogin] Days since last claim: $daysSinceLastClaim');
-
       // Reset streak if missed more than 1 day (not same day, not next day)
       if (daysSinceLastClaim > 1) {
-        print('[DailyLogin] Streak broken! Resetting to 0');
         state = state.copyWith(
           currentStreak: 0,
           lastClaimDate: null,
@@ -162,14 +148,10 @@ class DailyLoginService {
 
       // Validate day is within bounds
       if (currentDay < 1 || currentDay > state.rewards.length) {
-        print('[DailyLogin] ERROR: Invalid day $currentDay');
         return {'success': false, 'message': 'Invalid reward day'};
       }
 
       final currentReward = state.rewards[currentDay - 1];
-      print(
-        '[DailyLogin] Claiming day $currentDay: ${currentReward.coins} coins',
-      );
 
       // Call backend API with retry logic
       Map<String, dynamic>? result;
@@ -187,7 +169,6 @@ class DailyLoginService {
           }
         } catch (e) {
           retryCount++;
-          print('[DailyLogin] Attempt $retryCount failed: $e');
           if (retryCount >= 3) {
             rethrow;
           }
@@ -197,7 +178,6 @@ class DailyLoginService {
 
       if (result != null && result['success'] == true) {
         // Extract data from backend response
-        print('[DailyLogin] Processing successful response: $result');
         final rewardData = result['reward'] as Map<String, dynamic>?;
         final gameData = result['game'] as Map<String, dynamic>?;
         final newStreak = result['newStreak'] ?? state.currentStreak + 1;
@@ -218,10 +198,8 @@ class DailyLoginService {
 
         // Save to local storage immediately
         await _saveState(updatedState);
-        print('[DailyLogin] Successfully claimed! New streak: $newStreak');
 
         final rewardCoins = rewardData?['coins'] ?? currentReward.coins;
-        print('[DailyLogin] Reward coins: $rewardCoins');
 
         return {
           'success': true,
@@ -233,7 +211,6 @@ class DailyLoginService {
           'message': result['message'] ?? 'Claimed $rewardCoins coins!',
         };
       } else {
-        print('[DailyLogin] Backend claim failed: ${result?['message']}');
         final message = result?['message'] ?? 'Backend request failed';
         return {
           'success': false,
@@ -242,7 +219,6 @@ class DailyLoginService {
         };
       }
     } catch (e) {
-      print('[DailyLogin] Exception in claimReward: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
     }
   }
