@@ -89,12 +89,8 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
     }
   }
 
-  // 4. Cancel Order
-  Future<void> cancelOrder(
-    String orderId, {
-    int discountPercent = 0,
-    String? cancelReason,
-  }) async {
+  // 4. Cancel Order (NO discount here - discount is applied in Marketplace)
+  Future<void> cancelOrder(String orderId, {String? cancelReason}) async {
     final previousState = state;
     // Optimistic update
     state = state.whenData((orders) {
@@ -120,11 +116,7 @@ class OrderController extends StateNotifier<AsyncValue<List<OrderModel>>> {
     });
 
     try {
-      await _repository.cancelOrder(
-        orderId,
-        discountPercent: discountPercent,
-        cancelReason: cancelReason,
-      );
+      await _repository.cancelOrder(orderId, cancelReason: cancelReason);
     } catch (e) {
       state = previousState;
       rethrow;

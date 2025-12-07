@@ -476,19 +476,12 @@ class ApiService {
     }
   }
 
-  Future<void> cancelOrder(
-    String orderId, {
-    int discountPercent = 0,
-    String? cancelReason,
-  }) async {
+  Future<void> cancelOrder(String orderId, {String? cancelReason}) async {
     try {
       final headers = await _getHeaders();
-      final body = {
-        'discountPercent': discountPercent,
-        'cancelReason': cancelReason ?? 'Order canceled by restaurant',
-      };
+      final body = {'cancelReason': cancelReason ?? 'Canceled by restaurant'};
       final response = await http
-          .post(
+          .patch(
             Uri.parse('$baseUrl/orders/$orderId/cancel'),
             headers: headers,
             body: jsonEncode(body),
@@ -1184,6 +1177,171 @@ class ApiService {
       final headers = await _getHeaders();
       final response = await http
           .delete(Uri.parse('$baseUrl/marketplace/$itemId'), headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  // --- NEW MARKETPLACE FLOW APIs ---
+
+  /// Get pending discount items (Marketplace screen - items waiting for discount)
+  Future<Map<String, dynamic>> getPendingDiscountItems({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      final uri = Uri.parse(
+        '$baseUrl/marketplace/pending/list',
+      ).replace(queryParameters: queryParams);
+
+      final headers = await _getHeaders();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// Get discounted items (Canceled Dashboard - items with discount applied)
+  Future<Map<String, dynamic>> getDiscountedItems({
+    String? availability,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (availability != null && availability.isNotEmpty) {
+        queryParams['availability'] = availability;
+      }
+
+      final uri = Uri.parse(
+        '$baseUrl/marketplace/discounted/list',
+      ).replace(queryParameters: queryParams);
+
+      final headers = await _getHeaders();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// Apply discount to marketplace item and move to Canceled Dashboard
+  Future<Map<String, dynamic>> applyDiscountToMarketplaceItem({
+    required String itemId,
+    required double discountPercent,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/marketplace/$itemId/apply-discount'),
+            headers: headers,
+            body: jsonEncode({'discountPercent': discountPercent}),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// Get user's canceled orders (Customer cancellation screen)
+  Future<Map<String, dynamic>> getUserCanceledOrders({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      final uri = Uri.parse(
+        '$baseUrl/marketplace/my-cancellations',
+      ).replace(queryParameters: queryParams);
+
+      final headers = await _getHeaders();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// Get available marketplace items (public browse)
+  Future<Map<String, dynamic>> getAvailableMarketplaceItems({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'availability': 'available',
+      };
+
+      final uri = Uri.parse(
+        '$baseUrl/marketplace',
+      ).replace(queryParameters: queryParams);
+
+      final response = await http.get(uri).timeout(const Duration(seconds: 60));
+
+      return _processResponse(response);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  /// Purchase a marketplace item
+  Future<Map<String, dynamic>> purchaseMarketplaceItem({
+    required String itemId,
+    required String deliveryAddress,
+    required String contactPhone,
+    String? paymentMethod,
+    String? notes,
+    String? orderType,
+    bool useCoins = false,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final body = {
+        'deliveryAddress': deliveryAddress,
+        'contactPhone': contactPhone,
+        'paymentMethod': paymentMethod ?? 'cod',
+        'orderType': orderType ?? 'pickup',
+        'useCoins': useCoins,
+      };
+      if (notes != null) body['notes'] = notes;
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/marketplace/$itemId/purchase'),
+            headers: headers,
+            body: jsonEncode(body),
+          )
           .timeout(const Duration(seconds: 60));
 
       return _processResponse(response);

@@ -11,6 +11,9 @@ class MarketplaceItemModel {
   final double discountPercent;
   final double discountedPrice;
   final String availability; // available, sold, expired
+  final String marketplaceStatus; // pending_discount, discounted
+  final bool discountApplied;
+  final DateTime? discountAppliedAt;
   final DateTime canceledAt;
   final String cancelReason;
   final DateTime? statusUpdatedAt;
@@ -19,6 +22,10 @@ class MarketplaceItemModel {
   final DateTime expiresAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  // Customer info (non-sensitive, from originalCustomer populate)
+  final String? customerName;
+  final String? customerPhone;
 
   MarketplaceItemModel({
     required this.id,
@@ -30,6 +37,9 @@ class MarketplaceItemModel {
     required this.discountPercent,
     required this.discountedPrice,
     required this.availability,
+    required this.marketplaceStatus,
+    required this.discountApplied,
+    this.discountAppliedAt,
     required this.canceledAt,
     required this.cancelReason,
     this.statusUpdatedAt,
@@ -38,9 +48,19 @@ class MarketplaceItemModel {
     required this.expiresAt,
     required this.createdAt,
     required this.updatedAt,
+    this.customerName,
+    this.customerPhone,
   });
 
   factory MarketplaceItemModel.fromJson(Map<String, dynamic> json) {
+    // Extract customer info from originalCustomer if populated
+    String? customerName;
+    String? customerPhone;
+    if (json['originalCustomer'] != null && json['originalCustomer'] is Map) {
+      customerName = json['originalCustomer']['name'];
+      customerPhone = json['originalCustomer']['phone'];
+    }
+
     return MarketplaceItemModel(
       id: json['_id'] ?? '',
       orderId: json['order'] is String
@@ -61,6 +81,11 @@ class MarketplaceItemModel {
       discountPercent: (json['discountPercent'] ?? 0).toDouble(),
       discountedPrice: (json['discountedPrice'] ?? 0).toDouble(),
       availability: json['availability'] ?? 'available',
+      marketplaceStatus: json['marketplaceStatus'] ?? 'pending_discount',
+      discountApplied: json['discountApplied'] ?? false,
+      discountAppliedAt: json['discountAppliedAt'] != null
+          ? DateTime.parse(json['discountAppliedAt'])
+          : null,
       canceledAt: DateTime.parse(
         json['canceledAt'] ?? DateTime.now().toIso8601String(),
       ),
@@ -81,6 +106,8 @@ class MarketplaceItemModel {
       updatedAt: DateTime.parse(
         json['updatedAt'] ?? DateTime.now().toIso8601String(),
       ),
+      customerName: customerName,
+      customerPhone: customerPhone,
     );
   }
 
@@ -94,6 +121,9 @@ class MarketplaceItemModel {
       'discountPercent': discountPercent,
       'discountedPrice': discountedPrice,
       'availability': availability,
+      'marketplaceStatus': marketplaceStatus,
+      'discountApplied': discountApplied,
+      'discountAppliedAt': discountAppliedAt?.toIso8601String(),
       'canceledAt': canceledAt.toIso8601String(),
       'cancelReason': cancelReason,
       'statusUpdatedAt': statusUpdatedAt?.toIso8601String(),
@@ -108,6 +138,8 @@ class MarketplaceItemModel {
   bool get isExpired => DateTime.now().isAfter(expiresAt);
   bool get isAvailable => availability == 'available' && !isExpired;
   bool get isSold => availability == 'sold';
+  bool get isPendingDiscount => marketplaceStatus == 'pending_discount';
+  bool get isDiscounted => marketplaceStatus == 'discounted';
 
   double get savingsAmount => originalPrice - discountedPrice;
 }

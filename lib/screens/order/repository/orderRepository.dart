@@ -9,11 +9,7 @@ abstract class IOrderRepository {
   Future<OrderModel> getOrderById(String id);
   Future<void> updateOrderStatus(String orderId, String status);
   Future<OrderModel> placeOrder(OrderModel order);
-  Future<void> cancelOrder(
-    String orderId, {
-    int discountPercent,
-    String? cancelReason,
-  });
+  Future<void> cancelOrder(String orderId, {String? cancelReason});
   Future<Map<String, dynamic>> rateOrder(
     String orderId,
     int rating,
@@ -52,16 +48,8 @@ class OrderRepository implements IOrderRepository {
   }
 
   @override
-  Future<void> cancelOrder(
-    String orderId, {
-    int discountPercent = 0,
-    String? cancelReason,
-  }) async {
-    await _apiService.cancelOrder(
-      orderId,
-      discountPercent: discountPercent,
-      cancelReason: cancelReason,
-    );
+  Future<void> cancelOrder(String orderId, {String? cancelReason}) async {
+    await _apiService.cancelOrder(orderId, cancelReason: cancelReason);
   }
 
   @override

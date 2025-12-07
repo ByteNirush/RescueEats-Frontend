@@ -851,11 +851,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
     }
   }
 
-  // Handle cancel order with discount input
+  // Handle cancel order - NO DISCOUNT HERE (discount is applied in Marketplace)
   Future<void> _handleCancelOrder(OrderModel order) async {
-    final TextEditingController discountController = TextEditingController(
-      text: '50',
-    );
     final TextEditingController reasonController = TextEditingController();
 
     final result = await showDialog<Map<String, dynamic>>(
@@ -875,9 +872,32 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'This order will be automatically added to the marketplace with the discount you specify.',
-                style: TextStyle(fontSize: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.orange[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Order will be moved to Marketplace. You can add discount there.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.orange[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Container(
@@ -898,23 +918,17 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
                       'Total: Rs. ${order.totalAmount.toStringAsFixed(0)}',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
+                    const SizedBox(height: 8),
+                    ...order.items.map(
+                      (item) => Text(
+                        '• ${item.menuItemName} x${item.quantity}',
+                        style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: discountController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Discount Percentage',
-                  hintText: 'Enter discount (0-100)',
-                  prefixIcon: const Icon(Icons.percent),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
               TextField(
                 controller: reasonController,
                 maxLines: 2,
@@ -936,11 +950,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
           ),
           ElevatedButton(
             onPressed: () {
-              final discount = int.tryParse(discountController.text) ?? 0;
               Navigator.pop(ctx, {
-                'discount': discount.clamp(0, 100),
                 'reason': reasonController.text.trim().isEmpty
-                    ? 'Order canceled by restaurant'
+                    ? 'Canceled by restaurant'
                     : reasonController.text.trim(),
               });
             },
@@ -969,11 +981,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
     try {
       await ref
           .read(orderControllerProvider.notifier)
-          .cancelOrder(
-            order.id,
-            discountPercent: result['discount'] as int,
-            cancelReason: result['reason'] as String,
-          );
+          .cancelOrder(order.id, cancelReason: result['reason'] as String);
 
       if (mounted) {
         setState(() {
@@ -987,7 +995,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard>
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
                 Expanded(
-                  child: Text('Order canceled and added to marketplace!'),
+                  child: Text(
+                    'Order canceled! Go to Marketplace to add discount.',
+                  ),
                 ),
               ],
             ),
